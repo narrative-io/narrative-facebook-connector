@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>%d [%thread] %highlight(%-5level) %cyan(%logger{0}) - %msg %n</pattern>
+        </encoder>
+    </appender>
+    <appender name="JSON_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+    </appender>
+
+    <logger name="com.amazonaws.auth.profile.internal.BasicProfileConfigLoader" level="ERROR"/>
+    <logger name="com.amazonaws.internal.InstanceMetadataServiceResourceFetcher" level="ERROR"/>
+    <logger name="org.http4s.blaze.channel" level="WARN" />
+    <logger name="org.http4s.server.message-failures" level="DEBUG" />
+
+    <root level="INFO">
+        <if condition='isDefined("DISABLE_JSON_LOGS")'>
+            <then>
+                <appender-ref ref="STDOUT"/>
+            </then>
+            <else>
+                <appender-ref ref="JSON_STDOUT"/>
+            </else>
+        </if>
+    </root>
+</configuration>

@@ -20,7 +20,7 @@ val commonSettings = Seq(
   scalacOptions ++= Seq(
     "-language:postfixOps"
   ),
-  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.0" cross CrossVersion.full),
+  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full),
   addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
   // Avoid unit test errors like:
   // "com.fasterxml.jackson.databind.JsonMappingException: Scala module 2.9.10 requires Jackson Databind version >= 2.9.0 and < 2.10.0"
@@ -53,14 +53,16 @@ lazy val `api` = project
       Aws.`aws-java-sdk-sts`,
       Doobie.`doobie-core`,
       Doobie.`doobie-postgres`,
+      Http4s.`http4s-blaze-client`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
       Http4s.`http4s-circe`,
       Http4s.`http4s-server`,
       Http4s.`http4s-blaze-server`,
       NarrativeBackend.`narrative-common-catsretry`,
-      ScalaTest.`scalatest` % "test",
-      ScalaMock.`scalamock` % "test"
+      NarrativeBackend.`narrative-common-ssm`,
+      NarrativeBackend.`narrative-microframework-config`,
+      ScalaTest.`scalatest` % "test"
     )
   )
   .dependsOn(`stores`)
@@ -69,6 +71,7 @@ lazy val `stores` = project
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
+      Aws.`aws-java-sdk-ssm`,
       Cats.`cats-effect`,
       Cats.`cats-core`,
       Doobie.`doobie-core`,
