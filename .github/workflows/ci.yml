@@ -1,0 +1,133 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    name: Build and Test
+    strategy:
+      matrix:
+        os: [self-hosted]
+        scala: [2.12.14]
+        java: [adopt@1.8]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java and Scala
+        uses: olafurpg/setup-scala@v13
+        with:
+          java-version: ${{ matrix.java }}
+
+      - name: Cache sbt
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.sbt
+            ~/.ivy2/cache
+            ~/.coursier/cache/v1
+            ~/.cache/coursier/v1
+            ~/AppData/Local/Coursier/Cache/v1
+            ~/Library/Caches/Coursier/v1
+          key: ${{ runner.os }}-sbt-cache-v2-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: us-east-1
+          role-to-assume: 'arn:aws:iam::704349335716:role/nio-actions-runner'
+
+      - name: Build project
+        working-directory: backend
+        run: 'sbt ++${{ matrix.scala }} test it:test'
+
+      - name: Compress target directories
+        run: tar cf targets.tar backend/*/target
+
+      - name: Upload target directories
+        uses: actions/upload-artifact@v2
+        with:
+          name: target-${{ matrix.os }}-${{ matrix.scala }}-${{ matrix.java }}
+          path: targets.tar
+
+  changeset:
+    name: Determine Changesets
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: backend changeset
+        id: backend
+        uses: tj-actions/changed-files@v11.5
+        with:
+          files: |
+            ^backend/**
+    outputs:
+      backend: ${{ steps.backend.outputs.any_changed }}
+
+  publish:
+    name: Publish Artifacts
+    needs: [build, changeset]
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    strategy:
+      matrix:
+        os: [self-hosted]
+        scala: [2.12.14]
+        java: [adopt@1.8]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java and Scala
+        uses: olafurpg/setup-scala@v13
+        with:
+          java-version: ${{ matrix.java }}
+
+      - name: Cache sbt
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.sbt
+            ~/.ivy2/cache
+            ~/.coursier/cache/v1
+            ~/.cache/coursier/v1
+            ~/AppData/Local/Coursier/Cache/v1
+            ~/Library/Caches/Coursier/v1
+          key: ${{ runner.os }}-sbt-cache-v2-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
+
+      - name: Download target directories (2.12.14)
+        uses: actions/download-artifact@v2
+        with:
+          name: target-${{ matrix.os }}-2.12.14-${{ matrix.java }}
+
+      - name: Inflate target directories (2.12.14)
+        run: |
+          tar xf targets.tar
+          rm targets.tar
+
+      - name: Publish backend
+        if: needs.changeset.outputs.backend == 'true'
+        working-directory: backend
+        run: sbt "release with-defaults skip-tests"
+
+      - name: Prune docker images
+        run: docker system prune --force --all
