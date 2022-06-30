@@ -5,7 +5,9 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "deploy:dev": "wrangler publish",
+    "deploy:prod": "wrangler publish -e production"
   },
   "dependencies": {
     "@narrative.io/tackle-box": "^0.4.6",
