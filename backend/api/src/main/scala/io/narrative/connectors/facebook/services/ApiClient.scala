@@ -3,6 +3,7 @@ package io.narrative.connectors.facebook.services
 import cats.{Eq, Show}
 import cats.effect._
 import cats.syntax.applicativeError._
+import cats.syntax.show._
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
 import org.http4s.circe.CirceEntityCodec._
@@ -14,111 +15,147 @@ import io.narrative.connectors.facebook.domain.Profile
 class ApiClient(client: Client[IO], baseUri: Uri)(implicit contextShift: ContextShift[IO]) extends ApiClient.Ops[IO] {
   import ApiClient._
 
-  override def company(token: BearerToken): IO[ApiCompany] = {
+  override def company(auth: BearerToken): IO[ApiCompany] = {
     val url = baseUri.addSegment("company-info").addSegment("whoami")
-    val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(token))
+    val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(auth))
     client.expect[ApiCompany](request)
   }
 
-  override def installation(token: BearerToken): IO[ApiInstallation] = {
+  override def installation(auth: BearerToken): IO[ApiInstallation] = {
     val url = baseUri.addSegment("installations").addSegment("whoami")
-    val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(token))
+    val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(auth))
     client.expect[ApiInstallation](request)
   }
 
-  override def profile(token: BearerToken)(id: Profile.Id): IO[Option[ApiProfile]] =
-    installation(token).flatMap { info =>
+  override def profile(auth: BearerToken, id: Profile.Id): IO[Option[ApiProfile]] =
+    installation(auth).flatMap { info =>
       val url =
-        baseUri.addSegment("installations").addSegment(info.id.toString).addSegment("profiles").addSegment(id.toString)
-      val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(token))
+        baseUri
+          .addSegment("installations")
+          .addSegment(info.id.value.toString)
+          .addSegment("profiles")
+          .addSegment(id.value.toString)
+      val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(auth))
       client
         .expect[ApiProfile](request)
         .map(Option.apply)
         .recoverWith { case UnexpectedStatus(Status.NotFound, _, _) =>
-          IO(Option.empty[ApiProfile])
+          IO.pure(Option.empty[ApiProfile])
         }
     }
 
-  override def profiles(token: BearerToken): IO[List[ApiProfile]] =
-    installation(token).flatMap { info =>
-      val url = baseUri.addSegment("installations").addSegment(info.id.toString).addSegment("profiles")
-      val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(token))
+  override def profiles(auth: BearerToken): IO[List[ApiProfile]] =
+    installation(auth).flatMap { info =>
+      val url = baseUri.addSegment("installations").addSegment(info.id.value.toString).addSegment("profiles")
+      val request = Request[IO](method = Method.GET, uri = url).withHeaders(authHeader(auth))
       client.expect[ApiPaginatedResult[ApiProfile]](request).map(_.records)
     }
 
-  override def archiveProfile(token: BearerToken)(id: Profile.Id): IO[ApiProfile] =
-    installation(token).flatMap { info =>
+  override def archiveProfile(auth: BearerToken, id: Profile.Id): IO[Option[ApiProfile]] =
+    installation(auth).flatMap { info =>
       val url =
         baseUri
           .addSegment("installations")
-          .addSegment(info.id.toString)
+          .addSegment(info.id.value.toString)
           .addSegment("profiles")
           .addSegment(id.value.toString)
           .addSegment("archive")
-      val request = Request[IO](method = Method.POST, uri = url).withHeaders(authHeader(token))
-      client.expect[ApiProfile](request)
+      val request = Request[IO](method = Method.POST, uri = url).withHeaders(authHeader(auth))
+      client
+        .expect[ApiProfile](request)
+        .map(Option.apply)
+        .recoverWith { case UnexpectedStatus(Status.NotFound, _, _) =>
+          IO.pure(Option.empty[ApiProfile])
+        }
     }
 
-  override def createProfile(token: BearerToken)(name: String, description: Option[String]): IO[ApiProfile] =
-    installation(token).flatMap { info =>
-      val url = baseUri.addSegment("installations").addSegment(info.id.toString).addSegment("profiles")
+  override def createProfile(auth: BearerToken, name: String, description: Option[String]): IO[ApiProfile] =
+    installation(auth).flatMap { info =>
+      val url = baseUri.addSegment("installations").addSegment(info.id.show).addSegment("profiles")
       val entity = NewProfileRequest(name, description)
-      val request = Request[IO](method = Method.POST, uri = url).withEntity(entity).withHeaders(authHeader(token))
+      val request = Request[IO](method = Method.POST, uri = url).withEntity(entity).withHeaders(authHeader(auth))
       client.expect[ApiProfile](request)
     }
 
-  override def disableProfile(token: BearerToken)(id: Profile.Id): IO[ApiProfile] =
-    installation(token).flatMap { info =>
+  override def disableProfile(auth: BearerToken, id: Profile.Id): IO[Option[ApiProfile]] =
+    installation(auth).flatMap { info =>
       val url =
         baseUri
           .addSegment("installations")
-          .addSegment(info.id.toString)
+          .addSegment(info.id.value.toString)
           .addSegment("profiles")
           .addSegment(id.value.toString)
           .addSegment("disable")
-      val request = Request[IO](method = Method.POST, uri = url).withHeaders(authHeader(token))
-      client.expect[ApiProfile](request)
+      val request = Request[IO](method = Method.POST, uri = url).withHeaders(authHeader(auth))
+      client
+        .expect[ApiProfile](request)
+        .map(Option.apply)
+        .recoverWith { case UnexpectedStatus(Status.NotFound, _, _) =>
+          IO.pure(Option.empty[ApiProfile])
+        }
     }
 
-  override def enableProfile(token: BearerToken)(id: Profile.Id): IO[ApiProfile] =
-    installation(token).flatMap { info =>
+  override def enableProfile(auth: BearerToken, id: Profile.Id): IO[Option[ApiProfile]] =
+    installation(auth).flatMap { info =>
       val url =
         baseUri
           .addSegment("installations")
-          .addSegment(info.id.toString)
+          .addSegment(info.id.value.toString)
           .addSegment("profiles")
           .addSegment(id.value.toString)
           .addSegment("enable")
-      val request = Request[IO](method = Method.POST, uri = url).withHeaders(authHeader(token))
-      client.expect[ApiProfile](request)
+      val request = Request[IO](method = Method.POST, uri = url).withHeaders(authHeader(auth))
+      client
+        .expect[ApiProfile](request)
+        .map(Option.apply)
+        .recoverWith { case UnexpectedStatus(Status.NotFound, _, _) =>
+          IO.pure(Option.empty[ApiProfile])
+        }
     }
 
   override def updateProfile(
-      token: BearerToken
-  )(id: Profile.Id, name: String, description: Option[String]): IO[ApiProfile] =
-    installation(token).flatMap { info =>
+      auth: BearerToken,
+      id: Profile.Id,
+      name: String,
+      description: Option[String]
+  ): IO[Option[ApiProfile]] =
+    installation(auth).flatMap { info =>
       val url =
-        baseUri.addSegment("installations").addSegment(info.id.toString).addSegment("profiles").addSegment(id.toString)
+        baseUri
+          .addSegment("installations")
+          .addSegment(info.id.value.toString)
+          .addSegment("profiles")
+          .addSegment(id.value.toString)
       val entity = UpdateProfileRequest(name, description)
-      val request = Request[IO](method = Method.PUT, uri = url).withEntity(entity).withHeaders(authHeader(token))
-      client.expect[ApiProfile](request)
+      val request = Request[IO](method = Method.PUT, uri = url).withEntity(entity).withHeaders(authHeader(auth))
+      client
+        .expect[ApiProfile](request)
+        .map(Option.apply)
+        .recoverWith { case UnexpectedStatus(Status.NotFound, _, _) =>
+          IO.pure(Option.empty[ApiProfile])
+        }
     }
 }
 
 object ApiClient {
   trait ReadOps[F[_]] {
-    def company(token: BearerToken): F[ApiCompany]
-    def installation(token: BearerToken): F[ApiInstallation]
-    def profile(token: BearerToken)(id: Profile.Id): F[Option[ApiProfile]]
-    def profiles(token: BearerToken): F[List[ApiProfile]]
+    def company(auth: BearerToken): F[ApiCompany]
+    def installation(auth: BearerToken): F[ApiInstallation]
+    def profile(auth: BearerToken, id: Profile.Id): F[Option[ApiProfile]]
+    def profiles(auth: BearerToken): F[List[ApiProfile]]
   }
 
   trait WriteOps[F[_]] {
-    def archiveProfile(token: BearerToken)(id: Profile.Id): F[ApiProfile]
-    def createProfile(token: BearerToken)(name: String, description: Option[String]): F[ApiProfile]
-    def disableProfile(token: BearerToken)(id: Profile.Id): F[ApiProfile]
-    def enableProfile(token: BearerToken)(id: Profile.Id): F[ApiProfile]
-    def updateProfile(token: BearerToken)(id: Profile.Id, name: String, description: Option[String]): F[ApiProfile]
+    def archiveProfile(auth: BearerToken, id: Profile.Id): F[Option[ApiProfile]]
+    def createProfile(auth: BearerToken, name: String, description: Option[String]): F[ApiProfile]
+    def disableProfile(auth: BearerToken, id: Profile.Id): F[Option[ApiProfile]]
+    def enableProfile(auth: BearerToken, id: Profile.Id): F[Option[ApiProfile]]
+    def updateProfile(
+        auth: BearerToken,
+        id: Profile.Id,
+        name: String,
+        description: Option[String]
+    ): F[Option[ApiProfile]]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]
@@ -143,7 +180,7 @@ object ApiClient {
     implicit val show: Show[UpdateProfileRequest] = Show.fromToString
   }
 
-  private def authHeader(token: BearerToken): Authorization = Authorization(
-    Credentials.Token(AuthScheme.Bearer, token.value)
+  private def authHeader(auth: BearerToken): Authorization = Authorization(
+    Credentials.Token(AuthScheme.Bearer, auth.value)
   )
 }
