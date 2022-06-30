@@ -21,8 +21,6 @@ final case class Profile(
 object Profile {
   final case class Id(value: UUID) extends AnyVal
   object Id {
-    def newId(): Id = Id(UUID.randomUUID())
-
     implicit val decoder: Decoder[Id] = Decoder.decodeUUID.map(Id.apply)
     implicit val encoder: Encoder[Id] = Encoder.encodeUUID.contramap(_.value)
     implicit val eq: Eq[Id] = Eq.fromUniversalEquals
