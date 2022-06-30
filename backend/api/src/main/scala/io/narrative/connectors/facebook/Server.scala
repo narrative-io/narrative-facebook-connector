@@ -20,7 +20,7 @@ object Server extends IOApp.Simple with LazyLogging {
       resources <- Resources(config)
       routes <- Resource.eval(router(config, resources))
       server <- BlazeServerBuilder[IO](resources.serverEC)
-        .bindHttp(9002, "0.0.0.0")
+        .bindHttp(9998, "0.0.0.0")
         .withHttpApp(routes)
         .resource
     } yield server
@@ -37,6 +37,7 @@ object Server extends IOApp.Simple with LazyLogging {
       apiClient = new ApiClient(resources.client, apiBaseUri)
       fbClient = new FacebookClient(appId = appId, appSecret = appSecret, blocker = resources.blocker)
       profileService = new ProfileService(
+        apiClient,
         fbClient,
         new TokenEncryptionService(resources.blocker, kmsKeyId, resources.kms),
         ProfileStore(resources.xa)
@@ -44,7 +45,7 @@ object Server extends IOApp.Simple with LazyLogging {
       http = CORS.policy.withAllowCredentials(false) {
         Logging {
           Router[IO](
-            "/profiles" -> new ProfileRoutes(apiClient, profileService).routes,
+            "/profiles" -> new ProfileRoutes(profileService).routes,
             "/tokens" -> new TokenRoutes(profileService).routes
           ).orNotFound
         }
