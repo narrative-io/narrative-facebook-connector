@@ -12,7 +12,7 @@ object ReleaseSettings {
       val versionInThisBuild = (ThisBuild / version).value
       val versionValue = (p / version).value
       s"${(p / name).value}-v${if ((p / releaseUseGlobalVersion).value) versionInThisBuild
-      else versionValue}"
+        else versionValue}"
     }
   )
 }
