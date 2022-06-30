@@ -51,6 +51,7 @@ jobs:
           role-to-assume: 'arn:aws:iam::704349335716:role/nio-actions-runner'
 
       - name: Check formatting
+        working-directory: backend
         run: 'sbt ++${{ matrix.scala }} scalafmtSbtCheck scalafmtCheckAll'
 
       - name: Build project
