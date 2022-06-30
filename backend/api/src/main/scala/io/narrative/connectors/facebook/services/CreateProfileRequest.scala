@@ -7,6 +7,8 @@ import io.narrative.connectors.facebook.domain.AdAccount
 
 final case class CreateProfileRequest(
     adAccountId: AdAccount.Id,
+    description: Option[String],
+    name: String,
     token: FacebookToken
 )
 object CreateProfileRequest {
