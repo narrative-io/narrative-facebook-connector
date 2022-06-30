@@ -9,6 +9,7 @@ final case class Config(
     facebook: Config.Facebook,
     kms: Config.Kms,
     narrativeApi: Config.NarrativeApi,
+    server: Config.Server,
     stage: Stage
 )
 object Config {
@@ -18,12 +19,14 @@ object Config {
     database <- Database(stage)
     facebook <- Facebook()
     narrativeApi <- NarrativeApi(stage)
+    server <- Server()
     kms <- Kms()
   } yield Config(
     database = database,
     facebook = facebook,
     kms = kms,
     narrativeApi = narrativeApi,
+    server = server,
     stage = stage
   )
 
@@ -67,15 +70,21 @@ object Config {
         "FACEBOOK_APP_ID",
         "FACEBOOK_APP_ID_SSM",
         encrypted = false,
-        Config.ssmParam(s"/prod/delivery/facebook/app_id", encrypted = false)
+        Config.ssmParam(s"/prod/connectors/facebook/app_id", encrypted = false)
       )
       appSecret <- valueOrElse(
         "FACEBOOK_APP_SECRET",
         "FACEBOOK_APP_SECRET_SSM",
         encrypted = true,
-        Config.ssmParam(s"/prod/delivery/facebook/app_secret", encrypted = true)
+        Config.ssmParam(s"/prod/connectors/facebook/app_secret", encrypted = true)
       )
     } yield Facebook(appId, appSecret)
+  }
+
+  final case class Server(port: Config.Literal)
+  object Server {
+    def apply(): IO[Server] =
+      envOrElse("API_PORT", "8080").map(Config.Literal.apply).map(Server.apply)
   }
 
   final case class Kms(tokenEncryptionKeyId: Config.Value)
