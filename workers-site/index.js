@@ -32,11 +32,7 @@ async function handleEvent(event) {
    * You can add custom logic to how we fetch your assets
    * by configuring the function `mapRequestToAsset`
    */
-  options.mapRequestToAsset = request => {
-    const url = new URL(request.url)
-    url.pathname = `/`
-    return mapRequestToAsset(new Request(url, request))
-  }
+  options.mapRequestToAsset = handlePrefix("/connector-settings")
   try {
     if (DEBUG) {
       // customize caching
