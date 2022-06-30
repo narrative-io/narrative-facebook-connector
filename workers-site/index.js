@@ -33,10 +33,10 @@ async function handleEvent(event) {
    * by configuring the function `mapRequestToAsset`
    */
   options.mapRequestToAsset = request => {
-		const url = new URL(request.url)
-		url.pathname = `/`
-		return mapRequestToAsset(new Request(url, request))
-	}
+    const url = new URL(request.url)
+    url.pathname = `/`
+    return mapRequestToAsset(new Request(url, request))
+  }
   try {
     if (DEBUG) {
       // customize caching
