@@ -20,7 +20,7 @@ resource "aws_ecs_task_definition" "_" {
       { "name": "SSM_DB_USERNAME", "value": "${var.ssm_db_username}" },
       { "name": "SSM_DB_PASSWORD", "value": "${var.ssm_db_password}" },
       { "name": "STAGE", "value": "${var.stage}" },
-      { "name": "TOKEN_KMS_KEY_ID", "value" ${var.token_kms_key_id}" }
+      { "name": "TOKEN_KMS_KEY_ID", "value": "${var.token_kms_key_id}" }
     ],
     "portMappings": [
       {
