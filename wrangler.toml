@@ -1,0 +1,15 @@
+type = "webpack"
+name = "facebook-connector-development"
+account_id = "123f50d74ad4dbd7cf261c71356e509b"
+zone_id = "4e97fa948bc7a99bba03eac8403406f4"
+route = "facebook-connector-dev.narrative.tools/*"
+vars = { ENVIRONMENT = "development" }
+
+[site]
+bucket = "dist"
+entry-point = "workers-site"
+
+[env.production]
+name = "facebook-connector-production"
+vars = { ENVIRONMENT = "production" }
+route = "facebook-connector.narrative.tools/*"
