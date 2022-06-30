@@ -28,13 +28,13 @@ class ProfileStore() extends ProfileStore.Ops[ConnectionIO] {
     )
 
   override def create(
+      id: Profile.Id,
       adAccount: AdAccount,
       audience: Option[Audience],
       business: Business,
       companyId: CompanyId,
       token: Token
-  ): ConnectionIO[Profile] = {
-    val id = Profile.Id.newId()
+  ): ConnectionIO[Profile] =
     for {
       _ <-
         sql"""
@@ -71,7 +71,6 @@ class ProfileStore() extends ProfileStore.Ops[ConnectionIO] {
            |)""".stripMargin.update.run.void
       updated <- profile_!(id)
     } yield updated
-  }
 
   private def profiles(where: Fragment): ConnectionIO[List[Profile]] =
     (
@@ -166,6 +165,7 @@ object ProfileStore {
 
   trait WriteOps[F[_]] {
     def create(
+        id: Profile.Id,
         adAccount: AdAccount,
         audience: Option[Audience],
         business: Business,
@@ -190,12 +190,13 @@ object ProfileStore {
       override def profiles(query: Query): G[List[Profile]] = fk(store.profiles(query))
 
       override def create(
+          id: Profile.Id,
           adAccount: AdAccount,
           audience: Option[Audience],
           business: Business,
           companyId: CompanyId,
           token: Token
-      ): G[Profile] = fk(store.create(adAccount, audience, business, companyId, token))
+      ): G[Profile] = fk(store.create(id, adAccount, audience, business, companyId, token))
     }
 
   final case class Query(companyIds: List[CompanyId] = List.empty, profileIds: List[Profile.Id] = List.empty)
