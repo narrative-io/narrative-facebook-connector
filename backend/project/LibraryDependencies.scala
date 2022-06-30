@@ -11,15 +11,15 @@ object LibraryDependencies {
   }
 
   object NarrativeDB {
-    val `shared-db-migrations` = "io.narrative" %% "shared-db-migrations" % "0.1.77"
+    val `shared-db-migrations` = "io.narrative" %% "shared-db-migrations" % "0.1.82-SNAPSHOT"
   }
 
   object Aws {
     val version = "1.12.170"
-    //    val version = "1.11.676"
+    val `aws-java-sdk-core` = "com.amazonaws" % "aws-java-sdk-core" % version
+    val `aws-java-sdk-kms` = "com.amazonaws" % "aws-java-sdk-kms" % version
     val `aws-java-sdk-ssm` = "com.amazonaws" % "aws-java-sdk-ssm" % version
     val `aws-java-sdk-sts` = "com.amazonaws" % "aws-java-sdk-sts" % version
-    val `aws-java-sdk-core` = "com.amazonaws" % "aws-java-sdk-core" % version
   }
 
   object Cats {
@@ -37,8 +37,8 @@ object LibraryDependencies {
     val `circe-core` = "io.circe" %% "circe-core" % version
     val `circe-generic` = "io.circe" %% "circe-generic" % version
     val `circe-generic-extras` = "io.circe" %% "circe-generic-extras" % version
-    val `circe-parser` = "io.circe" %% "circe-parser" % version
     val `circe-literal` = "io.circe" %% "circe-literal" % version
+    val `circe-parser` = "io.circe" %% "circe-parser" % version
   }
 
   object CirceFs2 {
@@ -51,6 +51,11 @@ object LibraryDependencies {
     val `doobie-core` = "org.tpolecat" %% "doobie-core" % version
     val `doobie-postgres` = "org.tpolecat" %% "doobie-postgres" % version
     val `doobie-hikari` = "org.tpolecat" %% "doobie-hikari" % version
+  }
+
+  object Facebook {
+    val version = "13.0.0"
+    val `facebook-java-business-sdk` = "com.facebook.business.sdk" % "facebook-java-business-sdk" % version
   }
 
   object Fs2 {

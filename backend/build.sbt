@@ -49,10 +49,13 @@ lazy val `api` = project
   )
   .settings(
     libraryDependencies ++= Seq(
+      Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
       Aws.`aws-java-sdk-sts`,
       Doobie.`doobie-core`,
+      Doobie.`doobie-hikari`,
       Doobie.`doobie-postgres`,
+      Facebook.`facebook-java-business-sdk`,
       Http4s.`http4s-blaze-client`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
