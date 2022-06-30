@@ -13,3 +13,16 @@ resource "aws_kms_alias" "tokens" {
   name = "alias/${var.name_prefix}-tokens-${var.stage}"
   target_key_id = aws_kms_key.tokens.key_id
 }
+
+data "aws_iam_policy_document" "kms" {
+  statement {
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+    ]
+
+    resources = [
+      aws_kms_key.tokens.arn
+    ]
+  }
+}

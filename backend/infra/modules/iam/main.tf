@@ -3,6 +3,12 @@ resource "aws_iam_role" "_" {
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
+resource "aws_iam_role_policy" "kms" {
+  name = "${var.name_prefix}-kms-${var.stage}"
+  role = aws_iam_role._.id
+  policy = data.aws_iam_policy_document.kms.json
+}
+
 resource "aws_iam_role_policy" "ssm" {
   name = "${var.name_prefix}-ssm-${var.stage}"
   role = aws_iam_role._.id
