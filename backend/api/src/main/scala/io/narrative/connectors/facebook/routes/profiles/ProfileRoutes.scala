@@ -1,55 +1,52 @@
 package io.narrative.connectors.facebook.routes.profiles
 
-import cats.data.OptionT
+import cats.data.{EitherT, OptionT}
 import cats.effect.{ContextShift, IO}
+import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.domain.Profile
 import io.narrative.connectors.facebook.routes.Auth
-import io.narrative.connectors.facebook.services.{
-  ApiClient,
-  ApiCompany,
-  ApiPaginatedResult,
-  BearerToken,
-  CreateProfileRequest,
-  ProfileService
-}
+import io.narrative.connectors.facebook.services.{ApiPaginatedResult, BearerToken, CreateProfileRequest, ProfileService}
 import org.http4s._
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.dsl.io._
 
-class ProfileRoutes(apiClient: ApiClient.Ops[IO], service: ProfileService.Ops[IO])(implicit
+class ProfileRoutes(service: ProfileService.Ops[IO])(implicit
     contextShift: ContextShift[IO]
 ) extends LazyLogging {
 
   val routes: HttpRoutes[IO] = Auth.auth {
-    case GET -> Root as auth               => profiles(auth)
-    case GET -> Root / UUIDVar(id) as auth => profile(auth, Profile.Id(id))
-    case ctx @ POST -> Root as auth        => createProfile(auth, ctx.req)
+    case GET -> Root as auth                            => profiles(auth)
+    case GET -> Root / UUIDVar(id) as auth              => profile(auth, Profile.Id(id))
+    case ctx @ POST -> Root as auth                     => createProfile(auth, ctx.req)
+    case POST -> Root / UUIDVar(id) / "archive" as auth => archiveProfile(auth, Profile.Id(id))
+    case POST -> Root / UUIDVar(id) / "enable" as auth  => enableProfile(auth, Profile.Id(id))
   }
 
-  private def profiles(auth: BearerToken): IO[Response[IO]] =
-    for {
-      c <- company(auth)
-      profiles <- service.profiles(c.id)
-      resp <- Ok(ApiPaginatedResult(profiles))
-    } yield resp
-
-  private def profile(auth: BearerToken, id: Profile.Id): IO[Response[IO]] = {
-    val profileT = for {
-      c <- OptionT.liftF(company(auth))
-      profile <- OptionT(service.profile(c.id, id))
-    } yield profile
-
-    profileT.semiflatMap(Ok(_)).getOrElseF(NotFound())
-  }
+  private def archiveProfile(auth: BearerToken, id: Profile.Id): IO[Response[IO]] =
+    OptionT(service.archive(auth, id)).semiflatMap(Ok(_)).getOrElseF(NotFound())
 
   private def createProfile(auth: BearerToken, req: Request[IO]): IO[Response[IO]] =
     for {
-      c <- company(auth)
       createReq <- req.as[CreateProfileRequest]
-      profile <- service.create(c.id, createReq)
-      resp <- Created(profile)
+      resp <- EitherT(service.create(auth, createReq)).foldF(err => BadRequest(err.show), Created(_))
     } yield resp
 
-  private def company(auth: BearerToken): IO[ApiCompany] = apiClient.company(auth)
+  private def enableProfile(auth: BearerToken, id: Profile.Id): IO[Response[IO]] =
+    EitherT(service.enable(auth, id)).foldF(
+      {
+        case ProfileService.EnableError.NoSuchProfile(_) => NotFound()
+        case err                                         => BadRequest(err.show)
+      },
+      Ok(_)
+    )
+
+  private def profile(auth: BearerToken, id: Profile.Id): IO[Response[IO]] =
+    OptionT(service.profile(auth, id)).semiflatMap(Ok(_)).getOrElseF(NotFound())
+
+  private def profiles(auth: BearerToken): IO[Response[IO]] =
+    for {
+      profiles <- service.profiles(auth)
+      resp <- Ok(ApiPaginatedResult(profiles))
+    } yield resp
 }
