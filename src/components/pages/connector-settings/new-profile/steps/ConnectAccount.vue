@@ -14,6 +14,7 @@
       v-facebook-login(
         :app-id="appId"
         @login="onFacebookLogin"
+        :login-options="facebookLoginOptions"
         v-model="facebookModel"
         @sdk-init="facebookSdkInit"
       )
@@ -64,7 +65,9 @@ export default {
   }),
   computed: {
     modelValid() {
-      return this.model && this.model.token.is_valid
+      return this.model && this.model.token.is_valid &&
+        model.token.scopes.includes("ads_management") &&
+        model.token.scopes.includes("business_management")
     }
   },
   methods: {
