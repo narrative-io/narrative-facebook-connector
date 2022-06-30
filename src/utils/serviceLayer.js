@@ -1,7 +1,7 @@
-// const baseUrl = window.location.host === 's3-connector.narrative.tools' ?
-//   'https://aws-s3.narrativeconnectors.com' :
-//   'https://aws-s3-dev.narrativeconnectors.com'
-const baseUrl = "https://localhost:9002"
+const baseUrl = window.location.host === 'facebook-connector.narrative.tools' ?
+  'https://facebook.narrativeconnectors.com' :
+  'https://facebook-dev.narrativeconnectors.com'
+// const baseUrl = "https://localhost:9002"
 
 let headers = null
 

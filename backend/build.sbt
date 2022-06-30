@@ -41,8 +41,8 @@ lazy val `api` = project
   .settings(commonSettings)
   .settings(
     fargateAppPort := 8081,
-    fargateMainClass := "io.narrative.s3connector.Server",
-    fargateImageName := s"narrative-s3-connector/api"
+    fargateMainClass := "io.narrative.connectors.facebook.Server",
+    fargateImageName := "narrative-facebook-connector/api"
   )
   .settings(
     libraryDependencies ++= Logging.applicationLoggingDependencies
