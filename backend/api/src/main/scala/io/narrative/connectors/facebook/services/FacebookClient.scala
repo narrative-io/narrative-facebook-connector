@@ -6,6 +6,7 @@ import cats.syntax.show._
 import com.facebook.ads.{sdk => fb}
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.domain.{AdAccount, Audience, Business, FacebookUser}
+import io.narrative.connectors.facebook.services.TokenMeta.Scope
 import io.narrative.connectors.facebook.services.{
   AdAccountResponse,
   AudienceResponse,
@@ -94,13 +95,18 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     for {
       tokenProps <- tokenProps(accessToken)
       (isValid, scopes, issuedAt) = tokenProps
-      userOpt <- if (isValid) facebookUser(accessToken).map(Option(_)) else IO(None)
-    } yield TokenMeta(
-      issuedAt = issuedAt.map(_ * 1000L).map(Instant.ofEpochMilli),
-      isValid = isValid,
-      scopes = scopes,
-      user = userOpt
-    )
+      meta <-
+        if (isValid)
+          for {
+            user <- facebookUser(accessToken)
+          } yield TokenMeta.Valid(
+            issuedAt = issuedAt.get, // safe by construction
+            scopes = scopes,
+            user = user
+          )
+        else
+          IO.pure(TokenMeta.Invalid)
+    } yield meta
 
   // todo(mbabic) customer retention?
   /** @inheritdoc */
@@ -161,7 +167,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
       )
     ).map(_.asScala.toList)
 
-  private def tokenProps(accessToken: FacebookToken): IO[(Boolean, List[String], Option[Long])] = {
+  private def tokenProps(accessToken: FacebookToken): IO[(Boolean, List[Scope], Option[Instant])] = {
     // Calls to the debug_token require that we use an app access token instead of the user's access token.
     // An app access token can either be fetched explicitly or created by concatenating the appId and the appSecret.
     // We choose the latter for simplicity since we have everything we need in scope.
@@ -176,8 +182,8 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
       debugTokenResp <- runIO(debugTokenReq.execute())
       debugTokenJson = debugTokenResp.getRawResponseAsJsonObject.get("data").getAsJsonObject
       isValid = debugTokenJson.get("is_valid").getAsBoolean
-      scopes = debugTokenJson.getAsJsonArray("scopes").asScala.toList.map(_.getAsString)
-      issuedAt = Option(debugTokenJson.get("issued_at")).map(_.getAsLong * 1000L)
+      scopes = debugTokenJson.getAsJsonArray("scopes").asScala.toList.map(_.getAsString).map(Scope.parse)
+      issuedAt = Option(debugTokenJson.get("issued_at")).map(_.getAsLong * 1000L).map(Instant.ofEpochMilli)
     } yield (isValid, scopes, issuedAt)
   }
 
