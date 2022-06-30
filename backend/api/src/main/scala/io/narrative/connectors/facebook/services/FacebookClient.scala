@@ -100,7 +100,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
           for {
             user <- facebookUser(accessToken)
           } yield TokenMeta.Valid(
-            issuedAt = issuedAt.get, // safe by construction
+            issuedAt = issuedAt.getOrElse(Instant.now()),
             scopes = scopes,
             user = user
           )
