@@ -66,8 +66,8 @@ export default {
   computed: {
     modelValid() {
       return this.model && this.model.token.is_valid &&
-        model.token.scopes.includes("ads_management") &&
-        model.token.scopes.includes("business_management")
+        this.model.token.scopes.includes("ads_management") &&
+        this.model.token.scopes.includes("business_management")
     }
   },
   methods: {
