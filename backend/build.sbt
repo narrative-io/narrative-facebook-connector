@@ -73,6 +73,10 @@ lazy val `api` = project
 lazy val `stores` = project
   .settings(commonSettings)
   .settings(
+    // no need to publish, no consumers of this library
+    publish := {}
+  )
+  .settings(
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-ssm`,
       Cats.`cats-effect`,
