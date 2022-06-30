@@ -20,7 +20,7 @@ object Server extends IOApp.Simple with LazyLogging {
       resources <- Resources(config)
       routes <- Resource.eval(router(config, resources))
       server <- BlazeServerBuilder[IO](resources.serverEC)
-        .bindHttp(9998, "0.0.0.0")
+        .bindHttp(config.server.port.value.toInt, "0.0.0.0")
         .withHttpApp(routes)
         .resource
     } yield server
