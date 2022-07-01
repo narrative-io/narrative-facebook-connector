@@ -12,7 +12,7 @@
     message="The Facebook connector requires that you grant all of the requested permissions. Please login again."
     :visible="!loading && showInvalidTokenWarning"
   )
-  .filter(v-if="!modelValid && !loading")
+  .filter(v-if="!modelValid(model) && !loading")
     .title-description
       .filter-title.nio-h4.text-primary-darker Connect Facebook Account
       .description.nio-p.text-primary-dark Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus bibendum tincidunt iaculis. Curabitur finibus porta tristique. Praesent malesuada sodales odio, eu scelerisque est sollicitudin eu.
@@ -26,13 +26,13 @@
       )
         template(v-slot:login)
           span Login With Facebook
-  .filter(v-if="modelValid")
+  .filter(v-if="modelValid(model)")
     .title-description
       .filter-title.nio-h4.text-primary-darker User
       .description.nio-p.text-primary-dark The Facebook user associated with the profile.
     .filter-value
       nio-text-field.fill-width(v-model="model.token.user.name" label="User" disabled)
-  .filter(v-if="modelValid")
+  .filter(v-if="modelValid(model)")
     .title-description
       .filter-title.nio-h4.text-primary-darker Permissions
       .description.nio-p.text-primary-dark The set of permissions granted to the Narrative Facebook Connector.
@@ -74,15 +74,9 @@ export default {
     model: null,
     showInvalidTokenWarning: false
   }),
-  computed: {
-    modelValid() {
-      this.computeModelValid(this.model)
-    }
-  },
   methods: {
-    // Use method in addition to computed property as we need to reference this value outside of the template and can't
-    // rely on the `modelValid` value being updated when we need it to be.
-    computeModelValid(model) {
+    // NB: not a computed property as we rely on being able to read an up to date value outside the template.
+    modelValid(model) {
       return model &&
         model.token.is_valid &&
         this.missingScopes(this.model.token.scopes).length === 0
@@ -114,7 +108,7 @@ export default {
               }
             }
             this.loading = false
-            this.showInvalidTokenWarning = !this.computeModelValid(this.model)
+            this.showInvalidTokenWarning = !this.modelValid(this.model)
             this.$emit('stepPayloadChanged', this.model)
           })
         }
