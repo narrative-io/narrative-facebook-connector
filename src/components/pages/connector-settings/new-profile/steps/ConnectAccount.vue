@@ -66,8 +66,6 @@ export default {
     facebookModel: null,
     // The underlying scope component object
     facebookScope: null,
-    // Scopes granted by the user at login
-    grantedScopes: null,
     // The last access token returned by the Facebook login SDK.
     // Used to debounce onFacebookLogin calls.
     mostRecentAccessToken: null,
