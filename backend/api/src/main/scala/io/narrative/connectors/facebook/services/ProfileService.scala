@@ -26,7 +26,13 @@ class ProfileService(
   override def meta(token: FacebookToken): IO[TokenMetaResponse] =
     for {
       meta <- fb.tokenMeta(token)
-      adAccounts <- if (meta.isValid) fb.adAccounts(token) else IO.pure(List.empty[AdAccountResponse])
+      adAccounts <- meta match {
+        case TokenMeta.Valid(_, scopes, _) if scopes.contains(Scope.AdsManagement) =>
+          fb.adAccounts(token)
+        case _ =>
+          // cannot fetch company ad accounts with the "ads_management" scope
+          IO.pure(List.empty)
+      }
     } yield TokenMetaResponse(adAccounts = adAccounts, token = meta)
 
   override def profile(auth: BearerToken, id: Profile.Id): IO[Option[ProfileResponse]] = {
