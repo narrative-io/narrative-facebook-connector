@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook.services
 
 import cats.{Eq, Show}
-import cats.effect._
+import cats.effect.{ContextShift, IO}
 import cats.syntax.applicativeError._
 import cats.syntax.show._
 import io.circe.{Decoder, Encoder}

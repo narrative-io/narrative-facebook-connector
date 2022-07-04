@@ -1,4 +1,4 @@
-package io.narrative.connectors.facebook.service
+package io.narrative.connectors.facebook.services
 
 import cats.data.NonEmptyList
 import cats.effect.{Blocker, ContextShift, IO, Timer}
@@ -7,14 +7,6 @@ import com.facebook.ads.{sdk => fb}
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.domain.{AdAccount, Audience, Business, FacebookUser}
 import io.narrative.connectors.facebook.services.TokenMeta.Scope
-import io.narrative.connectors.facebook.services.{
-  AdAccountResponse,
-  AudienceResponse,
-  BusinessResponse,
-  FacebookToken,
-  FacebookUserResponse,
-  TokenMeta
-}
 import retry.RetryPolicies._
 import retry._
 

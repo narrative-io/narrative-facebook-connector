@@ -52,18 +52,66 @@ lazy val `api` = project
       Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
       Aws.`aws-java-sdk-sts`,
-      Doobie.`doobie-core`,
       Doobie.`doobie-hikari`,
-      Doobie.`doobie-postgres`,
-      Facebook.`facebook-java-business-sdk`,
-      Http4s.`http4s-blaze-client`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
       Http4s.`http4s-circe`,
       Http4s.`http4s-server`,
       Http4s.`http4s-blaze-server`,
-      NarrativeBackend.`narrative-common-catsretry`,
       NarrativeBackend.`narrative-common-ssm`,
+      NarrativeBackend.`narrative-microframework-config`,
+      ScalaTest.`scalatest` % "test"
+    )
+  )
+  .dependsOn(`services`)
+
+lazy val `delivery` = project
+  .enablePlugins(AwsFargateDockerPlugin)
+  .enablePlugins(JavaAppPackaging)
+  .enablePlugins(DockerPlugin)
+  .enablePlugins(EcrPlugin)
+  .configs(IntegrationTest)
+  .settings(Defaults.itSettings)
+  .settings(commonSettings)
+  .settings(
+    fargateAppPort := 8081,
+    fargateMainClass := "io.narrative.connectors.facebook.Server",
+    fargateImageName := "narrative-facebook-connector/api"
+  )
+  .settings(
+    libraryDependencies ++= Logging.applicationLoggingDependencies
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      Aws.`aws-java-sdk-kms`,
+      Aws.`aws-java-sdk-ssm`,
+      Aws.`aws-java-sdk-sts`,
+      Doobie.`doobie-hikari`,
+      Http4s.`http4s-core`,
+      Http4s.`http4s-dsl`,
+      Http4s.`http4s-circe`,
+      Http4s.`http4s-server`,
+      Http4s.`http4s-blaze-server`,
+      NarrativeBackend.`narrative-common-ssm`,
+      NarrativeBackend.`narrative-microframework-config`,
+      ScalaTest.`scalatest` % "test"
+    )
+  )
+  .dependsOn(`services`)
+
+lazy val `services` = project
+  .settings(commonSettings)
+  .settings(
+    // no need to publish, no consumers of this library
+    publish := {}
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      Aws.`aws-java-sdk-kms`,
+      Facebook.`facebook-java-business-sdk`,
+      Http4s.`http4s-blaze-client`,
+      Http4s.`http4s-circe`,
+      NarrativeBackend.`narrative-common-catsretry`,
       NarrativeBackend.`narrative-microframework-config`,
       ScalaTest.`scalatest` % "test"
     )
@@ -78,7 +126,6 @@ lazy val `stores` = project
   )
   .settings(
     libraryDependencies ++= Seq(
-      Aws.`aws-java-sdk-ssm`,
       Cats.`cats-effect`,
       Cats.`cats-core`,
       Doobie.`doobie-core`,

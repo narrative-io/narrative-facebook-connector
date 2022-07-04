@@ -5,8 +5,13 @@ import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.routes.Logging
 import io.narrative.connectors.facebook.routes.profiles.ProfileRoutes
 import io.narrative.connectors.facebook.routes.tokens.TokenRoutes
-import io.narrative.connectors.facebook.service.FacebookClient
-import io.narrative.connectors.facebook.services.{ApiClient, KmsKeyId, ProfileService, TokenEncryptionService}
+import io.narrative.connectors.facebook.services.{
+  ApiClient,
+  FacebookClient,
+  KmsKeyId,
+  ProfileService,
+  TokenEncryptionService
+}
 import io.narrative.connectors.facebook.stores.ProfileStore
 import org.http4s.{HttpApp, Uri}
 import org.http4s.blaze.server.BlazeServerBuilder
