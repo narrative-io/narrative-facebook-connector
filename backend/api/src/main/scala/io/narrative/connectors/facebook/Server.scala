@@ -39,7 +39,7 @@ object Server extends IOApp.Simple with LazyLogging {
       appSecret <- resources.resolve(config.facebook.appSecret)
       kmsKeyId <- resources.resolve(config.kms.tokenEncryptionKeyId).map(KmsKeyId.apply)
       apiBaseUri <- resources.resolve(config.narrativeApi.baseUri).map(Uri.unsafeFromString)
-      apiClient = new ApiClient(resources.client, apiBaseUri)
+      apiClient = new ApiClient(baseUri = apiBaseUri, client = resources.client)
       fbClient = new FacebookClient(appId = appId, appSecret = appSecret, blocker = resources.blocker)
       profileService = new ProfileService(
         apiClient,
