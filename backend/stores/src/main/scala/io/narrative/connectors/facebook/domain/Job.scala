@@ -73,7 +73,9 @@ object Job {
     implicit val show: Show[DeliverFile] = Show.fromToString
   }
 
-  /** Process an incoming command for a subscription delivery. */
+  /** Process an incoming command for a subscription delivery, enqueuing further file-specific work and creating
+    * audiences as required.
+    */
   final case class ProcessCommand(
       subscriptionId: SubscriptionId,
       transactionBatchId: TransactionBatchId
