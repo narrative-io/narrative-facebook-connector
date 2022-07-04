@@ -11,7 +11,8 @@ class RevisionStore() extends RevisionStore.Ops[ConnectionIO] {
     sql"select revision from next_revision".query[Long].unique.map(Revision.apply)
 
   override def setNextRevision(revision: Revision): ConnectionIO[Revision] =
-    sql"update next_revision set revision = $revision".update.run.map(_ => revision)
+    sql"update next_revision set revision = $revision, updated_at = now() at time zone 'UTC'".update.run
+      .map(_ => revision)
 }
 
 object RevisionStore {
