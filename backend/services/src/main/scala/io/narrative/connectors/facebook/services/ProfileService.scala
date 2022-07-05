@@ -10,7 +10,6 @@ import cats.syntax.show._
 import cats.syntax.traverse._
 import cats.effect.IO
 import io.narrative.connectors.facebook.domain.{AdAccount, Business, FacebookUser, Profile, Token}
-import io.narrative.connectors.facebook.service.FacebookClient
 import io.narrative.connectors.facebook.services.TokenMeta.Scope
 import io.narrative.connectors.facebook.stores.ProfileStore
 

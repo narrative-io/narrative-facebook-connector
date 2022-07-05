@@ -5,8 +5,13 @@ import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.routes.Logging
 import io.narrative.connectors.facebook.routes.profiles.ProfileRoutes
 import io.narrative.connectors.facebook.routes.tokens.TokenRoutes
-import io.narrative.connectors.facebook.service.FacebookClient
-import io.narrative.connectors.facebook.services.{ApiClient, KmsKeyId, ProfileService, TokenEncryptionService}
+import io.narrative.connectors.facebook.services.{
+  ApiClient,
+  FacebookClient,
+  KmsKeyId,
+  ProfileService,
+  TokenEncryptionService
+}
 import io.narrative.connectors.facebook.stores.ProfileStore
 import org.http4s.{HttpApp, Uri}
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -34,7 +39,7 @@ object Server extends IOApp.Simple with LazyLogging {
       appSecret <- resources.resolve(config.facebook.appSecret)
       kmsKeyId <- resources.resolve(config.kms.tokenEncryptionKeyId).map(KmsKeyId.apply)
       apiBaseUri <- resources.resolve(config.narrativeApi.baseUri).map(Uri.unsafeFromString)
-      apiClient = new ApiClient(resources.client, apiBaseUri)
+      apiClient = new ApiClient(baseUri = apiBaseUri, client = resources.client)
       fbClient = new FacebookClient(appId = appId, appSecret = appSecret, blocker = resources.blocker)
       profileService = new ProfileService(
         apiClient,
