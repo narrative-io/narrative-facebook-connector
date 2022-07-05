@@ -95,7 +95,7 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
   override def updateStatus(revision: Revision, update: CommandStore.StatusUpdate): ConnectionIO[Command] = {
     val setStmt = update match {
       case StatusUpdate.FileUpdate(file, status) =>
-        set(fr"status = jsonb_set(status, '{files,${file}}', ${status}, false)")
+        set(fr"""status = jsonb_set(status, '{files,${file}}', '"${status}"', false)""")
       case StatusUpdate.CommandUpdate(value) =>
         set(fr"status = ${value}")
     }
