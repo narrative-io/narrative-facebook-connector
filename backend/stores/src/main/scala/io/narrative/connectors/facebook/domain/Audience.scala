@@ -7,6 +7,9 @@ import io.circe.{Decoder, Encoder}
 final case class Audience(id: Audience.Id, name: Audience.Name)
 
 object Audience {
+  implicit val eq: Eq[Audience] = Eq.fromUniversalEquals
+  implicit val show: Show[Audience] = Show.fromToString
+
   final case class Id(value: String) extends AnyVal
   object Id {
     implicit val decoder: Decoder[Id] = Decoder.decodeString.map(Id.apply)
