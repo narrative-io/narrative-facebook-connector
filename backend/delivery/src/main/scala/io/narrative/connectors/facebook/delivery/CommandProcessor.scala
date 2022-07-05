@@ -8,6 +8,9 @@ import io.narrative.connectors.facebook.domain.{Audience, Command, FileName, Job
 import io.narrative.connectors.facebook.services.AppApiClient
 import io.narrative.connectors.facebook.stores.{CommandStore, JobStore}
 
+/** Resolves commands saved by the [[CommandConsumer]]. Outputs a resolved, stored command and jobs for processing each
+  * file in the delivery command.
+  */
 class CommandProcessor(
     api: AppApiClient.Ops[IO],
     commandStore: CommandStore.Ops[IO],
