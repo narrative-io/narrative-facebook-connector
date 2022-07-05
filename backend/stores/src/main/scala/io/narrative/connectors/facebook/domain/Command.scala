@@ -147,6 +147,9 @@ object Command {
       implicit val encoder: Encoder[ProcessingFiles] = deriveConfiguredEncoder
       implicit val eq: Eq[ProcessingFiles] = Eq.fromUniversalEquals
       implicit val show: Show[ProcessingFiles] = Show.fromToString
+
+      def apply(files: List[FileName]): ProcessingFiles =
+        ProcessingFiles(files.map(file => file -> FileStatus.Pending).toMap)
     }
   }
 }
