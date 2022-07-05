@@ -142,7 +142,7 @@ object JobStore {
   final case class NewJob(
       eventRevision: Revision,
       eventTimestamp: Instant,
-      quickSettings: Profile.QuickSettings,
+      quickSettings: Option[Profile.QuickSettings],
       payload: Job.Payload,
       profileId: Profile.Id
   )
