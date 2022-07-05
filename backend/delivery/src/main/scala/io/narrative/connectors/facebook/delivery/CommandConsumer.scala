@@ -7,20 +7,17 @@ import com.typesafe.scalalogging.LazyLogging
 import doobie.Transactor
 import doobie.implicits._
 import io.narrative.connectors.facebook.domain.{Job, Revision}
-import io.narrative.connectors.facebook.services.{ApiCommands, ApiDeliveryCommand, AppApiClient, FacebookClient}
-import io.narrative.connectors.facebook.stores.{JobStore, RevisionStore, SettingsStore}
+import io.narrative.connectors.facebook.services.{ApiCommands, ApiDeliveryCommand, AppApiClient}
+import io.narrative.connectors.facebook.stores.{JobStore, RevisionStore}
 
 /** Polls the narrative API to look for new commands. If found, the commands are enqueued as jobs for further
   * processing.
   */
-class CommandConsumer(api: AppApiClient.Ops[IO], fb: FacebookClient.Ops[IO], xa: Transactor[IO])
-    extends CommandConsumer.Ops[IO]
-    with LazyLogging {
+class CommandConsumer(api: AppApiClient.Ops[IO], xa: Transactor[IO]) extends CommandConsumer.Ops[IO] with LazyLogging {
   import CommandConsumer._
 
   private val jobStore = new JobStore(xa)
   private val revisionStore = new RevisionStore()
-  private val settingsStore = new SettingsStore()
 
   override def tick(maxWip: Int): IO[CommandConsumer.Result] =
     for {
