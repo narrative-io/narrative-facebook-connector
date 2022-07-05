@@ -131,7 +131,7 @@ object CommandStore {
   final case class NewCommand(
       eventRevision: Revision,
       eventTimestamp: Instant,
-      quickSettings: Profile.QuickSettings,
+      quickSettings: Option[Profile.QuickSettings],
       payload: Command.Payload,
       profileId: Profile.Id,
       settingsId: Settings.Id,

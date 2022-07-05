@@ -59,13 +59,18 @@ object Job {
   implicit val meta: Meta[Payload] = jsonbMeta[Payload]
   implicit val show: Show[Payload] = Show.fromToString
 
+  /** A payload encoding the delivery of a file. Looks silly for now as there is only one inhabitant of the sum type,
+    * but we're anticipating supporting dataset deliveries.
+    */
+  sealed trait FilePayload extends Payload
+
   /** Deliver the given file to the given audience for a subscription delivery. */
   final case class DeliverFile(
       audienceId: Audience.Id,
       file: FileName,
       subscriptionId: SubscriptionId,
       transactionBatchId: TransactionBatchId
-  ) extends Payload
+  ) extends FilePayload
   object DeliverFile {
     implicit val decoder: Decoder[DeliverFile] = deriveConfiguredDecoder
     implicit val encoder: Encoder[DeliverFile] = deriveConfiguredEncoder
@@ -73,13 +78,18 @@ object Job {
     implicit val show: Show[DeliverFile] = Show.fromToString
   }
 
+  /** A payload encoding the details of a command to be processed. Looks silly for now as there is only one inhabitant
+    * of the sum type, but we're anticipating supporting dataset deliveries.
+    */
+  sealed trait CommandPayload extends Payload
+
   /** Process an incoming command for a subscription delivery, enqueuing further file-specific work and creating
     * audiences as required.
     */
   final case class ProcessCommand(
       subscriptionId: SubscriptionId,
       transactionBatchId: TransactionBatchId
-  ) extends Payload
+  ) extends CommandPayload
   object ProcessCommand {
     implicit val decoder: Decoder[ProcessCommand] = deriveConfiguredDecoder
     implicit val encoder: Encoder[ProcessCommand] = deriveConfiguredEncoder
