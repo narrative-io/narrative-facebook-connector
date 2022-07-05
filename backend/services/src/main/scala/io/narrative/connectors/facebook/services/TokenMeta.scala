@@ -30,7 +30,7 @@ object TokenMeta {
       isValid <- c.get[Boolean]("is_valid")
       meta <-
         if (isValid)
-          deriveConfiguredDecoder[Valid].tryDecode(c)
+          Valid.decoder.tryDecode(c)
         else
           Invalid.asRight
     } yield meta

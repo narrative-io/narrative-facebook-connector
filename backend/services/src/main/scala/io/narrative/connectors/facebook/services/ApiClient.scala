@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook.services
 
 import cats.{Eq, Show}
-import cats.effect._
+import cats.effect.{ContextShift, IO}
 import cats.syntax.applicativeError._
 import cats.syntax.show._
 import io.circe.{Decoder, Encoder}
@@ -12,7 +12,8 @@ import org.http4s.client.{Client, UnexpectedStatus}
 import org.http4s.headers.Authorization
 import io.narrative.connectors.facebook.domain.Profile
 
-class ApiClient(client: Client[IO], baseUri: Uri)(implicit contextShift: ContextShift[IO]) extends ApiClient.Ops[IO] {
+/** todo(mbabic) scaladocs */
+class ApiClient(baseUri: Uri, client: Client[IO])(implicit contextShift: ContextShift[IO]) extends ApiClient.Ops[IO] {
   import ApiClient._
 
   override def company(auth: BearerToken): IO[ApiCompany] = {
@@ -180,7 +181,6 @@ object ApiClient {
     implicit val show: Show[UpdateProfileRequest] = Show.fromToString
   }
 
-  private def authHeader(auth: BearerToken): Authorization = Authorization(
-    Credentials.Token(AuthScheme.Bearer, auth.value)
-  )
+  private def authHeader(auth: BearerToken): Authorization =
+    Authorization(Credentials.Token(AuthScheme.Bearer, auth.value))
 }
