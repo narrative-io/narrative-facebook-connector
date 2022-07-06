@@ -1,6 +1,7 @@
 package io.narrative.connectors.facebook.delivery
 
 import cats.Show
+import cats.data.OptionT
 import cats.effect.IO
 import cats.syntax.option._
 import cats.syntax.show._
@@ -8,7 +9,7 @@ import com.typesafe.scalalogging.LazyLogging
 import io.circe.Json
 import io.circe.parser.parse
 import io.narrative.connectors.facebook.domain.Command.FileStatus
-import io.narrative.connectors.facebook.domain.{Audience, FileName, Job}
+import io.narrative.connectors.facebook.domain.{Audience, FileName, Job, Profile}
 import io.narrative.connectors.facebook.services.{
   AppApiClient,
   FacebookAudienceMember,
@@ -31,7 +32,7 @@ class DeliveryProcessor(
 
   override def process(input: DeliveryProcessor.Input): IO[Unit] = {
     val deliverIO = for {
-      profile <- profileStore.profile(input.job.profileId).map(_.get)
+      profile <- profile_!(input)
       token <- encryption.decrypt(profile.token.encrypted)
       _ <- deliverFile(input, token)
       _ <- markDelivered(input)
@@ -51,6 +52,10 @@ class DeliveryProcessor(
       .evalMapChunk(chunk => fb.addToAudience(token, audienceId(input), chunk.toList))
       .compile
       .drain
+
+  private def profile_!(input: DeliveryProcessor.Input): IO[Profile] =
+    OptionT(profileStore.profile(input.job.profileId))
+      .getOrRaise(new RuntimeException(s"profile ${input.job.profileId.show} does not exist. ${input.show}"))
 
   private def markDelivered(input: Input): IO[Unit] = for {
     _ <- IO(logger.info(s"successfully delivered ${input.show}"))
