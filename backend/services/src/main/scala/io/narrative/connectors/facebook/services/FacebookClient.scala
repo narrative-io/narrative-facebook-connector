@@ -2,8 +2,11 @@ package io.narrative.connectors.facebook.services
 
 import cats.data.NonEmptyList
 import cats.effect.{Blocker, ContextShift, IO, Timer}
+import cats.instances.list._
 import cats.syntax.show._
+import cats.syntax.traverse._
 import com.facebook.ads.{sdk => fb}
+import com.google.gson.{JsonArray, JsonObject, JsonPrimitive}
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.domain.{AdAccount, Audience, Business, FacebookUser}
 import io.narrative.connectors.facebook.services.TokenMeta.Scope
@@ -19,7 +22,8 @@ import scala.util.control.NoStackTrace
 class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implicit
     cs: ContextShift[IO],
     timer: Timer[IO]
-) extends FacebookClient.Ops[IO] {
+) extends FacebookClient.Ops[IO]
+    with LazyLogging {
   import FacebookClient._
 
   private val retryPolicy = limitRetries[IO](5).join(exponentialBackoff[IO](10.milliseconds))
@@ -99,6 +103,40 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
         else
           IO.pure(TokenMeta.Invalid)
     } yield meta
+
+  /** @inheritdoc */
+  override def addToAudience(
+      accessToken: FacebookToken,
+      audienceId: Audience.Id,
+      members: List[FacebookAudienceMember]
+  ): IO[Unit] = {
+    // The below is gross, but is mimicking the official example:
+    // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
+    val schema = new JsonArray()
+    // NB: only support MAID deliveries in the MVP
+    schema.add(new JsonPrimitive("MADID"))
+
+    def addBatch(audience: fb.CustomAudience, batch: List[FacebookAudienceMember]): IO[Unit] = {
+      logger.info(s"posting ${batch.size} members to facebook audience ${audienceId.value}")
+      val data = new JsonArray
+      batch.foreach { member =>
+        val row = new JsonArray()
+        row.add(new JsonPrimitive(member.maid.getOrElse("")))
+        data.add(row)
+      }
+      val payload = new JsonObject()
+      payload.add("schema", schema)
+      payload.add("data", data)
+      val createUser = audience.createUser()
+      createUser.setPayload(payload)
+      runIO(createUser.execute()).void
+    }
+
+    for {
+      audience <- runIO(fb.CustomAudience.fetchById(audienceId.value, mkContext(accessToken)))
+      _ <- members.grouped(AddToAudienceMaxBatchSize).toList.traverse(addBatch(audience, _))
+    } yield ()
+  }
 
   // todo(mbabic) customer retention?
   /** @inheritdoc */
@@ -207,6 +245,10 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
 }
 
 object FacebookClient extends LazyLogging {
+
+  /** The maximum number of records that can be added to a custom audience in a single API call. */
+  val AddToAudienceMaxBatchSize: Int = 10000
+
   // https://developers.facebook.com/docs/graph-api/using-graph-api/error-handling/
   private val RetryableErrorCodes: Set[Int] =
     Set(
@@ -244,6 +286,12 @@ object FacebookClient extends LazyLogging {
   }
 
   trait WriteOps[F[_]] {
+
+    /** Add the given members to the given audience.
+      *
+      * NB: the max size of the batch is defined by [[AddToAudienceMaxBatchSize]].
+      */
+    def addToAudience(accessToken: FacebookToken, audienceId: Audience.Id, batch: List[FacebookAudienceMember]): F[Unit]
 
     /** Create a custom audience associated in the given ad account. */
     def createCustomAudience(
