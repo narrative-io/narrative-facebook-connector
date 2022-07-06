@@ -286,10 +286,7 @@ object FacebookClient extends LazyLogging {
 
   trait WriteOps[F[_]] {
 
-    /** Add the given members to the given audience.
-      *
-      * NB: the max size of the batch is defined by [[AddToAudienceMaxBatchSize]].
-      */
+    /** Add the given members to the given audience. */
     def addToAudience(accessToken: FacebookToken, audienceId: Audience.Id, batch: List[FacebookAudienceMember]): F[Unit]
 
     /** Create a custom audience associated in the given ad account. */
