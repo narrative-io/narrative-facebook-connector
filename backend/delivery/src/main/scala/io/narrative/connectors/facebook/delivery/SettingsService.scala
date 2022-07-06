@@ -1,5 +1,6 @@
 package io.narrative.connectors.facebook.delivery
 
+import cats.Show
 import cats.data.{NonEmptyList, OptionT}
 import cats.effect.IO
 import cats.syntax.option.none
@@ -37,7 +38,9 @@ class SettingsService(
   ): IO[SettingsService.Result] = for {
     profile <- profileStore.profile(profileId).map(_.get)
     resolved <- resolveSettings(quickSettings, payload, profile)
-  } yield SettingsService.Result(id = resolved.settings.id, audience = resolved.audience, profile = profile)
+    result = SettingsService.Result(id = resolved.settings.id, audience = resolved.audience, profile = profile)
+    _ <- IO(logger.info(s"resolved ${result.show}"))
+  } yield result
 
   private def resolveSettings(
       quickSettings: Option[QuickSettings],
@@ -105,6 +108,11 @@ object SettingsService {
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]
 
   final case class Result(id: Settings.Id, audience: AudienceResponse, profile: Profile)
+  object Result {
+    implicit val show: Show[Result] = Show.show(r =>
+      s"settings: id=${r.id.show}, audienceId=${r.audience.id.show}, audienceName=${r.audience.name.show}, profileId=${r.profile.id.show}"
+    )
+  }
 
   private final case class ResolvedSettings(audience: AudienceResponse, settings: Settings)
 

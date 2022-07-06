@@ -104,7 +104,6 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
           IO.pure(TokenMeta.Invalid)
     } yield meta
 
-  /** @inheritdoc */
   override def addToAudience(
       accessToken: FacebookToken,
       audienceId: Audience.Id,

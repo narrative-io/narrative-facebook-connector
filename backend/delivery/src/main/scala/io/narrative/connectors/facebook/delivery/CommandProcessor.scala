@@ -1,8 +1,10 @@
 package io.narrative.connectors.facebook.delivery
 
+import cats.Show
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.syntax.option._
+import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.domain.{Audience, Command, FileName, Job, Settings}
 import io.narrative.connectors.facebook.services.AppApiClient
@@ -22,11 +24,15 @@ class CommandProcessor(
 
   override def process(input: Input): IO[CommandProcessor.Result] = {
     for {
+      _ <- IO(logger.info(s"processing ${input.show}"))
       settings <- settingsService.getOrCreate(input.job.quickSettings, input.payload, input.job.profileId)
       files <- api.files(input.job.eventRevision)
       newJobs = files.map(resp => mkJob(settings.audience.id, resp.file, input))
       jobs <- jobStore.enqueue(NonEmptyList.fromListUnsafe(newJobs)) // todo(mbabic) unsafe
       command <- commandStore.upsert(mkCommand(input, settings.id, Command.Status.ProcessingFiles(files.map(_.file))))
+      _ <- IO(
+        logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
+      )
     } yield Result(command = command, jobs = jobs)
   }
 }
@@ -46,6 +52,10 @@ object CommandProcessor {
       case p: Job.CommandPayload => Input(job, p).some
       case _                     => none
     }
+
+    implicit val show: Show[Input] = Show.show(in =>
+      s"input: id=${in.job.id.show}, revision=${in.job.eventRevision.show}, timestamp=${in.job.eventTimestamp}, payload=${in.payload.show}"
+    )
   }
   final case class Result(command: Command, jobs: List[Job])
 

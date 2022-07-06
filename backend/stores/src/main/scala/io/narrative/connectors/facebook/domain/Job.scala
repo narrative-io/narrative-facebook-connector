@@ -2,6 +2,7 @@ package io.narrative.connectors.facebook.domain
 
 import cats.{Eq, Show}
 import cats.syntax.either._
+import cats.syntax.show._
 import doobie.Meta
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
@@ -57,12 +58,21 @@ object Job {
   }
   implicit val eq: Eq[Payload] = Eq.fromUniversalEquals
   implicit val meta: Meta[Payload] = jsonbMeta[Payload]
-  implicit val show: Show[Payload] = Show.fromToString
+  implicit val show: Show[Payload] = Show.show {
+    case p: CommandPayload => p.show
+    case p: FilePayload    => p.show
+  }
 
   /** A payload encoding the delivery of a file. Looks silly for now as there is only one inhabitant of the sum type,
     * but we're anticipating supporting dataset deliveries.
     */
   sealed trait FilePayload extends Payload
+  object FilePayload {
+    implicit val eq: Eq[FilePayload] = Eq.fromUniversalEquals
+    implicit val show: Show[FilePayload] = Show.show { case p: DeliverFile =>
+      p.show
+    }
+  }
 
   /** Deliver the given file to the given audience for a subscription delivery. */
   final case class DeliverFile(
@@ -75,13 +85,21 @@ object Job {
     implicit val decoder: Decoder[DeliverFile] = deriveConfiguredDecoder
     implicit val encoder: Encoder[DeliverFile] = deriveConfiguredEncoder
     implicit val eq: Eq[DeliverFile] = Eq.fromUniversalEquals
-    implicit val show: Show[DeliverFile] = Show.fromToString
+    implicit val show: Show[DeliverFile] = Show.show(p =>
+      s"DeliverFile(audienceId=${p.audienceId.show}, file=${p.file.show}, subscriptionId=${p.subscriptionId.show}, transactionBatchId=${p.transactionBatchId.show})"
+    )
   }
 
   /** A payload encoding the details of a command to be processed. Looks silly for now as there is only one inhabitant
     * of the sum type, but we're anticipating supporting dataset deliveries.
     */
   sealed trait CommandPayload extends Payload
+  object CommandPayload {
+    implicit val eq: Eq[CommandPayload] = Eq.fromUniversalEquals
+    implicit val show: Show[CommandPayload] = Show.show { case p: ProcessCommand =>
+      p.show
+    }
+  }
 
   /** Process an incoming command for a subscription delivery, enqueuing further file-specific work and creating
     * audiences as required.
@@ -94,6 +112,9 @@ object Job {
     implicit val decoder: Decoder[ProcessCommand] = deriveConfiguredDecoder
     implicit val encoder: Encoder[ProcessCommand] = deriveConfiguredEncoder
     implicit val eq: Eq[ProcessCommand] = Eq.fromUniversalEquals
-    implicit val show: Show[ProcessCommand] = Show.fromToString
+    implicit val show: Show[ProcessCommand] =
+      Show.show(p =>
+        s"ProcessCommand(subscriptionId=${p.subscriptionId.show}, transactionBatchId=${p.transactionBatchId.show})"
+      )
   }
 }
