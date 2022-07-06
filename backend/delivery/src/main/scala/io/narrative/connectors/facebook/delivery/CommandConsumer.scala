@@ -4,8 +4,6 @@ import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
-import doobie.Transactor
-import doobie.implicits._
 import io.narrative.connectors.facebook.domain.{Job, Revision}
 import io.narrative.connectors.facebook.services.{ApiCommands, ApiDeliveryCommand, AppApiClient}
 import io.narrative.connectors.facebook.stores.{JobStore, RevisionStore}
@@ -13,15 +11,14 @@ import io.narrative.connectors.facebook.stores.{JobStore, RevisionStore}
 /** Polls the narrative API to look for new commands. If found, the commands are enqueued as jobs for further
   * processing.
   */
-class CommandConsumer(api: AppApiClient.Ops[IO], xa: Transactor[IO]) extends CommandConsumer.Ops[IO] with LazyLogging {
+class CommandConsumer(api: AppApiClient.Ops[IO], jobStore: JobStore.Ops, revisionStore: RevisionStore.Ops[IO])
+    extends CommandConsumer.Ops[IO]
+    with LazyLogging {
   import CommandConsumer._
-
-  private val jobStore = new JobStore(xa)
-  private val revisionStore = new RevisionStore()
 
   override def tick(maxWip: Int): IO[CommandConsumer.Result] =
     for {
-      revision <- revisionStore.currentRevision().transact(xa)
+      revision <- revisionStore.currentRevision()
       _ <- IO(logger.info(s"polling for new command from revision ${revision.show} ..."))
       commands <- api.commands(revision, maxResults = maxWip)
       jobs <- consume(commands)

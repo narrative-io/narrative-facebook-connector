@@ -94,7 +94,7 @@ class AppApiClient private (
   } yield response
 
   private def issueNewToken(): IO[ApiToken] = {
-    logger.info(s"Issuing a new token using client key/secret")
+    logger.info(s"issuing a new token using client id and secret")
     val url = baseUri.addSegment("oauth").addSegment("token")
     val request =
       Request[IO](method = Method.POST, uri = url)
@@ -108,7 +108,7 @@ class AppApiClient private (
   }
 
   private def refreshToken(token: ApiToken): IO[ApiToken] = {
-    logger.info(s"Refreshing token using refresh token")
+    logger.info(s"refreshing token using refresh token")
     val url = baseUri.addSegment("oauth").addSegment("token")
     val request =
       Request[IO](method = Method.POST, uri = url)

@@ -1,10 +1,13 @@
 package io.narrative.connectors.facebook.stores
 
+import cats.arrow.FunctionK
+import cats.effect.IO
 import cats.syntax.functor._
 import doobie.ConnectionIO
 import doobie.implicits._
 import doobie.implicits.legacy.instant._
 import doobie.Fragments.set
+import doobie.util.transactor.Transactor
 import io.narrative.connectors.facebook.domain.{Command, FileName, Profile, Revision, Settings}
 import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate
 
@@ -127,6 +130,23 @@ object CommandStore {
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]
+
+  def apply(xa: Transactor[IO]): CommandStore.Ops[IO] = apply(
+    new CommandStore(),
+    new FunctionK[ConnectionIO, IO] {
+      override def apply[A](fa: ConnectionIO[A]): IO[A] = fa.transact(xa)
+    }
+  )
+
+  def apply[F[_], G[_]](store: CommandStore.Ops[F], fk: FunctionK[F, G]): CommandStore.Ops[G] =
+    new CommandStore.Ops[G] {
+      override def command(revision: Revision): G[Option[Command]] = fk(store.command(revision))
+
+      override def upsert(command: NewCommand): G[Command] = fk(store.upsert(command))
+
+      override def updateStatus(revision: Revision, update: StatusUpdate): G[Command] =
+        fk(store.updateStatus(revision, update))
+    }
 
   final case class NewCommand(
       eventRevision: Revision,
