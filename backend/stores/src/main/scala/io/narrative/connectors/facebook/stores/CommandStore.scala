@@ -105,9 +105,9 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
         //   fr"""status = jsonb_set(status, '{files,${file}}', '"${status}"', false)"""
         // Results in a prepared statement that looks like:
         //   Fragment("SET status = jsonb_set(status, '{files,?}', '"?"', false) ")
-        // But JDBC does not parameters for prepared statements, namely ?, appearing in single quotes.
-        // Instead we produce a safe prepare statement that looks more like:
-        //   Fragment("SET status = jsonb_set(status, ?, ?, false) ")
+        // But JDBC does not like  parameters for prepared statements, namely ?, appearing in single quotes.
+        // Instead we produce a safe prepared statement that looks more like:
+        //   Fragment("SET status = jsonb_set(status, ? :: text[], ? :: jsonb, false) ")
         val path = Array[String]("files", file.value)
         set(fr"""status = jsonb_set(status, ${path} :: text[], ${status.asJson} :: jsonb, false)""")
       case StatusUpdate.CommandUpdate(value) =>
