@@ -73,7 +73,7 @@ module "fargate_worker" {
   ephemeral_storage = 128
   image_tag = local.worker_image_tag
   memory = "8192"
-  name_prefix = "${local.name_prefix}-api"
+  name_prefix = "${local.name_prefix}-worker"
   private_subnet_ids = local.private_subnet_ids
   repository_name = local.api_image_repository
   security_group_id = module.security_group.aws_security_group_id
