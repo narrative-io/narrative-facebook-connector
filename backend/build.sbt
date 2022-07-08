@@ -51,7 +51,6 @@ lazy val `api` = project
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
-      Aws.`aws-java-sdk-sts`,
       Doobie.`doobie-hikari`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
@@ -65,7 +64,7 @@ lazy val `api` = project
   )
   .dependsOn(`services`)
 
-lazy val `delivery` = project
+lazy val `worker` = project
   .enablePlugins(AwsFargateDockerPlugin)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
@@ -75,8 +74,8 @@ lazy val `delivery` = project
   .settings(commonSettings)
   .settings(
     fargateAppPort := 8081,
-    fargateMainClass := "io.narrative.connectors.facebook.Server",
-    fargateImageName := "narrative-facebook-connector/api"
+    fargateMainClass := "io.narrative.connectors.facebook.Main",
+    fargateImageName := "narrative-facebook-connector/worker"
   )
   .settings(
     libraryDependencies ++= Logging.applicationLoggingDependencies
@@ -85,13 +84,10 @@ lazy val `delivery` = project
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
-      Aws.`aws-java-sdk-sts`,
       Doobie.`doobie-hikari`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
       Http4s.`http4s-circe`,
-      Http4s.`http4s-server`,
-      Http4s.`http4s-blaze-server`,
       NarrativeBackend.`narrative-common-ssm`,
       NarrativeBackend.`narrative-microframework-config`,
       ScalaTest.`scalatest` % "test"

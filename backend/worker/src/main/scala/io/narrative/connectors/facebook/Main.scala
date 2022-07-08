@@ -1,4 +1,4 @@
-package io.narrative.connectors.facebook.delivery
+package io.narrative.connectors.facebook
 
 import cats.effect.{IO, IOApp, Resource}
 import cats.implicits._

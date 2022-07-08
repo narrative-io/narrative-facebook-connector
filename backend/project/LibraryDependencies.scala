@@ -19,7 +19,6 @@ object LibraryDependencies {
     val `aws-java-sdk-core` = "com.amazonaws" % "aws-java-sdk-core" % version
     val `aws-java-sdk-kms` = "com.amazonaws" % "aws-java-sdk-kms" % version
     val `aws-java-sdk-ssm` = "com.amazonaws" % "aws-java-sdk-ssm" % version
-    val `aws-java-sdk-sts` = "com.amazonaws" % "aws-java-sdk-sts" % version
   }
 
   object Cats {

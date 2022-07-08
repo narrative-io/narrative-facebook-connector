@@ -1,4 +1,4 @@
-package io.narrative.connectors.facebook.delivery
+package io.narrative.connectors.facebook
 
 import cats.effect.{Blocker, ContextShift, IO, Resource, Timer}
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
