@@ -17,7 +17,7 @@ object JsonMeta extends LazyLogging {
 
   def jsonbMeta[T: Decoder: Encoder](implicit tag: TypeTag[T]): Meta[T] =
     Meta.Advanced
-      .other[PGobject]("json")
+      .other[PGobject]("jsonb")
       .timap[T] { a =>
         circe.jawn
           .parse(a.getValue)
@@ -32,7 +32,7 @@ object JsonMeta extends LazyLogging {
           .merge
       }(a => {
         val o = new PGobject
-        o.setType("json")
+        o.setType("jsonb")
         o.setValue(a.asJson.noSpaces)
         o
       })
