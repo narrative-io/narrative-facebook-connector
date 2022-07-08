@@ -7,6 +7,10 @@ locals {
   private_subnet_ids = ["subnet-09a370ee67e9c9f54", "subnet-053b7ed0885562762"]
   ssm_db_username = "/${local.stage}/connectors/facebook/api/facebookconnector-db/user"
   ssm_db_password = "/${local.stage}/connectors/facebook/api/facebookconnector-db/password"
+  ssm_narrative_api_client = "/${local.stage}/connectors/facebook/openapi/client"
+  ssm_narrative_api_secret = "/${local.stage}/connectors/facebook/openapi/secret"
+  worker_image_tag = "0.0.8"
+  worker_image_repository = "narrative-facebook-connector/worker"
   stage = "dev"
   vpc_id = "vpc-11f3c974"
 }
@@ -61,12 +65,35 @@ module "fargate_api" {
   vpc_id = local.vpc_id
 }
 
+module "fargate_worker" {
+  source = "../modules/fargate_worker"
+  aws_iam_role_arn = module.iam.aws_iam_role_arn
+  cpu = "1024"
+  desired_count = 1
+  ephemeral_storage = 128
+  image_tag = local.worker_image_tag
+  memory = "8192"
+  name_prefix = "${local.name_prefix}-api"
+  private_subnet_ids = local.private_subnet_ids
+  repository_name = local.api_image_repository
+  security_group_id = module.security_group.aws_security_group_id
+  ssm_db_username = local.ssm_db_username
+  ssm_db_password = local.ssm_db_password
+  ssm_narrative_api_client = local.ssm_narrative_api_client
+  ssm_narrative_api_secret = local.ssm_narrative_api_secret
+  stage = local.stage
+  token_kms_key_id = module.iam.token_kms_key_id
+  vpc_id = local.vpc_id
+}
+
 module "iam" {
   source = "../modules/iam"
   name_prefix = local.name_prefix
   ssm_key_alias = "alias/ssm-params-${local.stage}"
   ssm_db_username = local.ssm_db_username
   ssm_db_password = local.ssm_db_password
+  ssm_narrative_api_client = local.ssm_narrative_api_client
+  ssm_narrative_api_secret = local.ssm_narrative_api_secret
   stage = local.stage
 }
 
