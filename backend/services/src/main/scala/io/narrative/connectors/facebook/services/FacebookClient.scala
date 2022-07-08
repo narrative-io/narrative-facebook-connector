@@ -112,7 +112,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     // The below is gross, but is mimicking the official example:
     // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
     val schema = new JsonArray()
-    // NB: only support MAID deliveries in the MVP
+    // NB: we only support MAID deliveries in the MVP
     schema.add(new JsonPrimitive("MADID"))
 
     def addBatch(audience: fb.CustomAudience, batch: List[FacebookAudienceMember]): IO[Unit] = {
@@ -132,7 +132,15 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     }
 
     for {
-      audience <- runIO(fb.CustomAudience.fetchById(audienceId.value, mkContext(accessToken)))
+      // we're required to use fetchByIds as fetchById tries to fetch all the fields of the underlying ad account and
+      // fails with "Policy ID is not available for Ad Account"
+      audience <- runIO(
+        fb.CustomAudience.fetchByIds(
+          List(audienceId.value).asJava,
+          List("id").asJava,
+          mkContext(accessToken)
+        )
+      ).map(_.head()) // todo(mbabic) error handling
       _ <- members.grouped(AddToAudienceMaxBatchSize).toList.traverse(addBatch(audience, _))
     } yield ()
   }
@@ -146,7 +154,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
       description: Option[String]
   ): IO[AudienceResponse] =
     for {
-      customAudience <- runIO(
+      audienceId <- runIO(
         new fb.AdAccount(adAccountId.value, mkContext(accessToken))
           .createCustomAudience()
           .setName(name.value)
@@ -156,13 +164,14 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
             fb.CustomAudience.EnumCustomerFileSource.VALUE_PARTNER_PROVIDED_ONLY
           )
           .execute()
+          .getId
       )
-      adAccounts <- adAccounts(accessToken, NonEmptyList.one(adAccountId))
-    } yield mkCustomAudiences(List(customAudience), adAccounts) match {
+      audiences <- customAudiences(accessToken, NonEmptyList.one(Audience.Id(audienceId)))
+    } yield audiences match {
       case value :: _ => value
       case Nil =>
         throw new RuntimeException(
-          s"unexpected error created custom audience: failed to construct response, but custom audience ${customAudience.getFieldName} (${customAudience.getId}) created in ad account ${adAccountId.show}"
+          s"unexpected error creating custom audience: failed to construct response, but custom audience ${audienceId} created in ad account ${adAccountId.show}"
         )
     }
 

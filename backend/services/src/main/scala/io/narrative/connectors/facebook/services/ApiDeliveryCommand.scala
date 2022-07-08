@@ -20,7 +20,7 @@ object ApiDeliveryCommand {
       metadata <- c.get[Metadata]("metadata")
       typeString <- c.get[String]("payload_type")
       payload <- typeString match {
-        case "PerformDelivery" => DeliverFiles.decoder.tryDecode(c)
+        case "PerformDelivery" => DeliverFiles.decoder.tryDecode(c.downField("payload"))
         case _                 => DecodingFailure(s"Unsupported payload type ${typeString}", c.history).asLeft
       }
     } yield ApiDeliveryCommand(metadata = metadata, payload = payload)
