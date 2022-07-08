@@ -24,6 +24,8 @@ data "aws_iam_policy_document" "ssm" {
     resources = [
       "arn:aws:ssm:*:704349335716:parameter${var.ssm_db_username}",
       "arn:aws:ssm:*:704349335716:parameter${var.ssm_db_password}",
+      "arn:aws:ssm:*:704349335716:parameter${var.ssm_narrative_api_client}",
+      "arn:aws:ssm:*:704349335716:parameter${var.ssm_narrative_api_secret}",
       "arn:aws:ssm:*:704349335716:parameter/prod/connectors/facebook/app_id",
       "arn:aws:ssm:*:704349335716:parameter/prod/connectors/facebook/app_secret"
     ]
