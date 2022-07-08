@@ -1,3 +1,3 @@
 set -euo pipefail
 
-sbt $@ "delivery/runMain io.narrative.connectors.facebook.Worker"
+sbt $@ "worker/runMain io.narrative.connectors.facebook.Main"
