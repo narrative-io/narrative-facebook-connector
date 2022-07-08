@@ -19,7 +19,6 @@ class ProfileService(
     encryption: TokenEncryptionService.Ops[IO],
     store: ProfileStore.Ops[IO]
 ) extends ProfileService.Ops[IO] {
-
   import ProfileService._
 
   override def meta(token: FacebookToken): IO[TokenMetaResponse] =

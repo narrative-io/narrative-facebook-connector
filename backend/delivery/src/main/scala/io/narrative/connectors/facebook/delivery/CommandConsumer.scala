@@ -33,7 +33,10 @@ class CommandConsumer(api: AppApiClient.Ops[IO], jobStore: JobStore.Ops, revisio
       }
       _ <-
         if (enqueued.nonEmpty)
-          IO(logger.info(s"enqueued ${enqueued.size} jobs. next revision: ${commands.nextRevision.show}"))
+          for {
+            _ <- IO(logger.info(s"enqueued ${enqueued.size} jobs. next revision: ${commands.nextRevision.show}"))
+            _ <- revisionStore.setNextRevision(commands.nextRevision)
+          } yield ()
         else
           IO(logger.info(s"empty poll: no new commands to process. next revision: ${commands.nextRevision.show}"))
     } yield enqueued

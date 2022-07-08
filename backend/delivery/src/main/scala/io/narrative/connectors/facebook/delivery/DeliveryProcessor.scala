@@ -58,13 +58,13 @@ class DeliveryProcessor(
       .getOrRaise(new RuntimeException(s"profile ${input.job.profileId.show} does not exist. ${input.show}"))
 
   private def markDelivered(input: Input): IO[Unit] = for {
-    _ <- IO(logger.info(s"successfully delivered ${input.show}"))
+    _ <- IO(logger.info(s"delivery success. ${input.show}"))
     _ <- commandStore.updateStatus(input.job.eventRevision, FileUpdate(file(input), FileStatus.Delivered))
   } yield ()
 
   private def markFailure(input: Input, err: Throwable): IO[Unit] =
     for {
-      _ <- IO(logger.error(s"delivery failed ${input.show}", err))
+      _ <- IO(logger.error(s"delivery failed. ${input.show}", err))
       _ <- commandStore.updateStatus(input.job.eventRevision, FileUpdate(file(input), FileStatus.Failed))
     } yield ()
 }
@@ -80,7 +80,7 @@ object DeliveryProcessor {
   final case class Input(job: Job, payload: Job.FilePayload)
   object Input {
     implicit val show: Show[Input] = Show.show(in =>
-      s"input: revision=${in.job.eventRevision.show}, timestamp=${in.job.eventTimestamp}, audienceId=${audienceId(in)}, file=${file(in).show}, "
+      s"input: revision=${in.job.eventRevision.show}, timestamp=${in.job.eventTimestamp}, audienceId=${audienceId(in).show}, file=${file(in).show}"
     )
   }
 
