@@ -65,7 +65,7 @@ lazy val `api` = project
   )
   .dependsOn(`services`)
 
-lazy val `delivery` = project
+lazy val `worker` = project
   .enablePlugins(AwsFargateDockerPlugin)
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
@@ -75,8 +75,8 @@ lazy val `delivery` = project
   .settings(commonSettings)
   .settings(
     fargateAppPort := 8081,
-    fargateMainClass := "io.narrative.connectors.facebook.Server",
-    fargateImageName := "narrative-facebook-connector/api"
+    fargateMainClass := "io.narrative.connectors.facebook.Main",
+    fargateImageName := "narrative-facebook-connector/worker"
   )
   .settings(
     libraryDependencies ++= Logging.applicationLoggingDependencies
