@@ -51,7 +51,6 @@ lazy val `api` = project
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
-      Aws.`aws-java-sdk-sts`,
       Doobie.`doobie-hikari`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
@@ -85,13 +84,10 @@ lazy val `worker` = project
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
-      Aws.`aws-java-sdk-sts`,
       Doobie.`doobie-hikari`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
       Http4s.`http4s-circe`,
-      Http4s.`http4s-server`,
-      Http4s.`http4s-blaze-server`,
       NarrativeBackend.`narrative-common-ssm`,
       NarrativeBackend.`narrative-microframework-config`,
       ScalaTest.`scalatest` % "test"
