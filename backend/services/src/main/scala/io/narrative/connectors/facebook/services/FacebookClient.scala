@@ -26,6 +26,10 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     with LazyLogging {
   import FacebookClient._
 
+  // Facebook has special support for constructing tokens that allow an app to perform actions by concatenating the
+  // app id with the app secreet.
+  private val appToken: FacebookToken = FacebookToken(s"${appId}|${appSecret}")
+
   private val retryPolicy = limitRetries[IO](5).join(exponentialBackoff[IO](10.milliseconds))
 
   /** Ad accounts by IDs for the user associated with the given token. */
@@ -176,6 +180,18 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     }
 
   /** @inheritdoc */
+  override def disconnectUsers(ids: NonEmptyList[FacebookUser.Id]): IO[Unit] = {
+    val ctx = mkContext(appToken)
+    val batchReq = ids.foldLeft(new fb.BatchRequest(ctx)) { (req, id) =>
+      req.addRequest(s"revoke permissions ${id.show}", new fb.User(id.value, ctx).deletePermissions())
+    }
+    for {
+      _ <- IO(logger.info(s"disconnecting users ${ids.toList.map(_.show).mkString(", ")}"))
+      _ <- runIO(batchReq.execute())
+    } yield ()
+  }
+
+  /** @inheritdoc */
   override def exchangeForLongLivedToken(accessToken: FacebookToken): IO[FacebookToken] =
     for {
       accessTokenJson <- runIO(
@@ -188,10 +204,6 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
           .getRawResponseAsJsonObject()
       )
     } yield FacebookToken(accessTokenJson.get("access_token").getAsString)
-
-  /** @inheritdoc */
-  override def revoke(accessToken: FacebookToken): IO[Unit] =
-    runIO(new fb.APIRequest(mkContext(accessToken), "me", "/permissions", "DELETE").execute()).void
 
   private def fbCustomAudiences(
       accessToken: FacebookToken,
@@ -209,7 +221,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     // Calls to the debug_token require that we use an app access token instead of the user's access token.
     // An app access token can either be fetched explicitly or created by concatenating the appId and the appSecret.
     // We choose the latter for simplicity since we have everything we need in scope.
-    val appTokenCtx = mkContext(FacebookToken(s"${appId}|${appSecret}"))
+    val appTokenCtx = mkContext(appToken)
     val debugTokenReq =
       new fb.APIRequest(appTokenCtx, "debug_token", "/", "GET")
         .setParam("input_token", accessToken.value)
@@ -304,11 +316,13 @@ object FacebookClient extends LazyLogging {
         description: Option[String]
     ): F[AudienceResponse]
 
+    /** Delete all permissions the given users have granted to the application, removing the application's ability to
+      * perform any actions on their behalf.
+      */
+    def disconnectUsers(ids: NonEmptyList[FacebookUser.Id]): F[Unit]
+
     /** Exchange the given token for a long-lived token appopriate for use in backend server-to-server processes. */
     def exchangeForLongLivedToken(accessToken: FacebookToken): F[FacebookToken]
-
-    /** Delete the permissions associated with a token, removing the application's ability to use the token. */
-    def revoke(accessToken: FacebookToken): F[Unit]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]

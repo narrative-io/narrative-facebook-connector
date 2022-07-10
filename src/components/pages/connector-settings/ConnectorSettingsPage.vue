@@ -16,11 +16,17 @@
     )
       .header.app-header
         h1.nio-h1.text-primary-darker Facebook Profiles
-        NioButton(
-          icon-name="utility-plus"
-          normal-primary-prepend
-          @click="changeTab('newProfile')"
-        ) New Profile
+        .header-buttons
+          NioButton(
+            v-if="profiles && profiles.length > 0"
+            caution-outlined
+            @click="disconnectAccount"
+          ) Disconnect Account
+          NioButton.ml-2(
+            icon-name="utility-plus"
+            normal-primary-prepend
+            @click="changeTab('newProfile')"
+          ) New Profile
       .no-profiles(v-if="profiles && profiles.length === 0")
         NioIconFramer(
           icon-name="display-curvy-arrow"
@@ -59,29 +65,60 @@
       @confirm="confirmDeleteProfile"
     )
   NioDialog(
+    v-model="confirmDisconnectDialog"
+  )
+    ConfirmDisconnectDialog(
+      @cancel="confirmDisconnectDialog = false"
+      @confirm="confirmDisconnectAccount"
+    )
+  NioDialog(
     v-model="errorDialog"
   )
     ErrorDialog(
       @close="errorDialog = false"
     )
+  //- Instantiate invisble login button so that the user can be logged out if they choose to disconnect their account.
+  VFacebookLogin.d-none(
+    :app-id="appId"
+    @sdk-init="facebookSdkInit"
+  )
 </template>
 
 <script>
 
+import axios from 'axios'
 import ConfirmDeleteDialog from './ConfirmDeleteDialog'
+import ConfirmDisconnectDialog from './ConfirmDisconnectDialog'
 import ErrorDialog from './ErrorDialog'
 import NewProfile from './new-profile/NewProfile'
 import ProfileList from './list-profiles/ProfileList'
-import { NioOpenApiModule } from '@narrative.io/tackle-box'
+import VFacebookLogin from 'vue-facebook-login-component'
 import { makeRandomId } from '@narrative.io/tackle-box/src/modules/helpers'
+import { NioOpenApiModule } from '@narrative.io/tackle-box'
 import { baseUrl, setHeaders, getHeaders } from '@/utils/serviceLayer'
-import axios from 'axios'
 
 export default {
-  components: { NewProfile, ProfileList, ConfirmDeleteDialog, ErrorDialog },
+  components: {
+    ConfirmDeleteDialog,
+    ConfirmDisconnectDialog,
+    ErrorDialog,
+    NewProfile,
+    ProfileList,
+    VFacebookLogin
+  },
   data: () => ({
+    activeTab: 0,
+    // Narrative Audience Uploader Facebook app ID. Not a secret.
+    appId: "554425321962851",
+    confirmDeleteDialog: false,
+    confirmDisconnectDialog: false,
+    errorDialog: false,
+    // The underlying scope component object of the Facebook SDK
+    facebookScope: null,
     loading: true,
+    newProfileElementId: null,
     profiles: null,
+    profileToDelete: null,
     tabs: [
       {
         name: 'listProfiles',
@@ -91,12 +128,7 @@ export default {
         name: 'newProfile',
         label: ''
       }
-    ],
-    activeTab: 0,
-    profileToDelete: null,
-    confirmDeleteDialog: false,
-    errorDialog: false,
-    newProfileElementId: null
+    ]
   }),
   mounted() {
     this.newProfileElementId = makeRandomId()
@@ -106,6 +138,63 @@ export default {
     openApiInit(token) {
       setHeaders(token)
       this.getProfiles()
+    },
+    changeTab(newTabName) {
+      this.activeTab = this.tabs.indexOf(this.tabs.find(tab => tab.name === newTabName))
+    },
+    confirmDeleteProfile() {
+      parent.postMessage(
+        {
+        name: 'scrollTo',
+        payload: {
+          x: 0,
+          y: 0
+        }
+        },
+        "*"
+      )
+      this.confirmDeleteDialog = false
+      this.loading = true
+      axios.post(`${baseUrl}/profiles/${this.profileToDelete.id}/archive`, null, getHeaders())
+        .then(
+          () => this.getProfiles(),
+          () => {
+            this.errorDialog = true
+            this.loading = false
+          }
+      )
+    },
+    confirmDisconnectAccount() {
+      parent.postMessage(
+        {
+        name: 'scrollTo',
+        payload: {
+          x: 0,
+          y: 0
+        }
+        },
+        "*"
+      )
+      this.confirmDisconnectDialog = false
+      this.loading = true
+      axios.post(`${baseUrl}/profiles/disconnect`, null, getHeaders())
+        .then(
+          () => {
+            this.facebookScope.logout()
+            return this.getProfiles()
+          },
+          () => {
+            this.errorDialog = true
+            this.loading = false
+          }
+        )
+    },
+    deleteProfile(profile) {
+      this.profileToDelete = profile
+      this.confirmDeleteDialog = true
+    },
+    disconnectAccount() {
+      this.confirmDisconnectDialog = true
     },
     getProfiles() {
       this.profiles = []
@@ -121,30 +210,8 @@ export default {
         }
       )
     },
-    deleteProfile(profile) {
-      this.profileToDelete = profile
-      this.confirmDeleteDialog = true
-    },
-    confirmDeleteProfile() {
-      parent.postMessage(
-        {
-        name: 'scrollTo',
-        payload: {
-          x: 0,
-          y: 0
-        }
-        },
-        "*"
-      )
-      this.confirmDeleteDialog = false
-      this.loading = true
-      axios.post(`${baseUrl}/profiles/${this.profileToDelete.id}/archive`, null, getHeaders()).then(() => this.getProfiles(), () => {
-        this.errorDialog = true
-        this.loading = false
-      })
-    },
-    changeTab(newTabName) {
-      this.activeTab = this.tabs.indexOf(this.tabs.find(tab => tab.name === newTabName))
+    facebookSdkInit({ scope }) {
+      this.facebookScope = scope
     },
     profileSaved() {
       this.newProfileElementId = makeRandomId()
@@ -153,7 +220,7 @@ export default {
       this.getProfiles()
     },
     learnMore() {
-
+      // todo
     }
   }
 };
@@ -164,6 +231,9 @@ export default {
 @import "@narrative.io/tackle-box/src/styles/global/_colors"
 
 .connector-settings-page
+  .header-buttons
+    display: flex
+
   .nio-tabs
     ::v-deep .v-tabs
       display: none

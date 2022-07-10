@@ -19,6 +19,7 @@ class ProfileRoutes(service: ProfileService.Ops[IO])(implicit
     case GET -> Root as auth                            => profiles(auth)
     case GET -> Root / UUIDVar(id) as auth              => profile(auth, Profile.Id(id))
     case ctx @ POST -> Root as auth                     => createProfile(auth, ctx.req)
+    case _ @POST -> Root / "disconnect" as auth         => disconnectProfiles(auth)
     case POST -> Root / UUIDVar(id) / "archive" as auth => archiveProfile(auth, Profile.Id(id))
     case POST -> Root / UUIDVar(id) / "enable" as auth  => enableProfile(auth, Profile.Id(id))
   }
@@ -31,6 +32,8 @@ class ProfileRoutes(service: ProfileService.Ops[IO])(implicit
       createReq <- req.as[CreateProfileRequest]
       resp <- EitherT(service.create(auth, createReq)).foldF(err => BadRequest(err.show), Created(_))
     } yield resp
+
+  private def disconnectProfiles(auth: BearerToken): IO[Response[IO]] = service.disconnect(auth).flatMap(Ok(_))
 
   private def enableProfile(auth: BearerToken, id: Profile.Id): IO[Response[IO]] =
     EitherT(service.enable(auth, id)).foldF(

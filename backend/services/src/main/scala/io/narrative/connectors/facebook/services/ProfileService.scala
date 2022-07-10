@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook.services
 
 import cats.Show
-import cats.data.{EitherT, OptionT}
+import cats.data.{EitherT, NonEmptyList, OptionT}
 import cats.instances.list._
 import cats.syntax.either._
 import cats.syntax.eq._
@@ -116,6 +116,16 @@ class ProfileService(
     createT.value
   }
 
+  override def disconnect(auth: BearerToken): IO[Unit] = for {
+    profiles <- profiles(auth)
+    userIds = profiles.map(_.token).collect { case TokenMeta.Valid(_, _, user) => user.id }.distinct
+    _ <- NonEmptyList.fromList(userIds) match {
+      case Some(userIdsNel) => fb.disconnectUsers(userIdsNel)
+      case None             => IO.unit
+    }
+    _ <- profiles.traverse(profile => archive(auth, profile.id))
+  } yield ()
+
   override def enable(auth: BearerToken, id: Profile.Id): IO[Either[EnableError, ProfileResponse]] = {
     val createT = for {
       apiProfile <- EitherT.fromOptionF(api.profile(auth, id), EnableError.noSuchProfile(id))
@@ -184,6 +194,9 @@ object ProfileService {
   trait WriteOps[F[_]] {
     def archive(auth: BearerToken, id: Profile.Id): F[Option[ProfileResponse]]
     def create(auth: BearerToken, req: CreateProfileRequest): F[Either[CreateError, ProfileResponse]]
+
+    /** Archive all company profiles and revoke all Facebook permissions. */
+    def disconnect(auth: BearerToken): F[Unit]
     def enable(auth: BearerToken, id: Profile.Id): F[Either[EnableError, ProfileResponse]]
   }
 
