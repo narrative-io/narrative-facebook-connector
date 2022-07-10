@@ -18,7 +18,7 @@
             .nio-h4.text-primary-darker Business
             .nio-p.text-primary-dark.description {{ slotProps.item.ad_account.business.name }}
       .split-row
-        .display-row.display-table
+        .display-row.display-table(v-if="slotProps.item.token.is_valid")
           .display-column
             .nio-h4.text-primary-darker Connected User
             .nio-p.text-primary-dark.description {{ slotProps.item.token.user.name }}

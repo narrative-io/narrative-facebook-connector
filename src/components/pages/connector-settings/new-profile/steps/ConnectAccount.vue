@@ -23,7 +23,7 @@
           a.text-decoration-underline(@click="showPermissionsDialog = true") Learn more
           span #{' '}about the permissions required by the app.
     .filter-value.facebook-login-button.fill-width
-      v-facebook-login(
+      VFacebookLogin(
         :app-id="appId"
         @login="onFacebookLogin"
         :login-options="facebookLoginOptions"
@@ -37,13 +37,13 @@
       .filter-title.nio-h4.text-primary-darker User
       .description.nio-p.text-primary-dark The Facebook user associated with the profile.
     .filter-value
-      nio-text-field.fill-width(v-model="model.token.user.name" label="User" disabled)
+      NioTextField.fill-width(v-model="model.token.user.name" label="User" disabled)
   .filter(v-if="modelValid(model)")
     .title-description
       .filter-title.nio-h4.text-primary-darker Permissions
       .description.nio-p.text-primary-dark The set of permissions granted to the Narrative Facebook Connector.
     .filter-value
-      nio-tags-field.fill-width(v-model="model.token.scopes" label="Permissions" disabled)
+      NioTagsField.fill-width(v-model="model.token.scopes" label="Permissions" disabled)
   NioDialog(
     v-model="showPermissionsDialog"
   )
