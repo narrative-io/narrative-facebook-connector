@@ -1,6 +1,6 @@
 package io.narrative.connectors.facebook.domain
 
-import cats.{Eq, Show}
+import cats.{Eq, Order, Show}
 import doobie.Meta
 import doobie.postgres.implicits._
 import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
@@ -26,6 +26,7 @@ object Profile {
     implicit val encoder: Encoder[Id] = Encoder.encodeUUID.contramap(_.value)
     implicit val eq: Eq[Id] = Eq.fromUniversalEquals
     implicit val meta: Meta[Id] = Meta[UUID].imap(Id.apply)(_.value)
+    implicit val order: Order[Id] = Order.by(_.value.toString)
     implicit val show: Show[Id] = Show.show(_.value.toString)
   }
 
