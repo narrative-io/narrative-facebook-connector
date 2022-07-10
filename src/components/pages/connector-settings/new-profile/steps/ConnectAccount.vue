@@ -15,7 +15,13 @@
   .filter(v-if="!modelValid(model) && !loading")
     .title-description
       .filter-title.nio-h4.text-primary-darker Connect Facebook Account
-      .description.nio-p.text-primary-dark Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus bibendum tincidunt iaculis. Curabitur finibus porta tristique. Praesent malesuada sodales odio, eu scelerisque est sollicitudin eu.
+      .description.nio-p.text-primary-dark
+        span
+          | Log in to to authorize the conntor to seamlessly deliver your data purchases straight to a Facebook a custom
+          | audience in one of your ad accounts.#{' '}
+        p
+          a.text-decoration-underline(@click="showPermissionsDialog = true") Learn more
+          span #{' '}about the permissions required by the app.
     .filter-value.facebook-login-button.fill-width
       v-facebook-login(
         :app-id="appId"
@@ -38,15 +44,22 @@
       .description.nio-p.text-primary-dark The set of permissions granted to the Narrative Facebook Connector.
     .filter-value
       nio-tags-field.fill-width(v-model="model.token.scopes" label="Permissions" disabled)
+  NioDialog(
+    v-model="showPermissionsDialog"
+  )
+    PermissionsDialog(
+      @close="showPermissionsDialog = false"
+    )
 </template>
 
 <script>
 import { baseUrl, getHeaders } from '@/utils/serviceLayer'
 import axios from 'axios'
+import PermissionsDialog from "./PermissionsDialog"
 import VFacebookLogin from 'vue-facebook-login-component'
 
 export default {
-  components: { VFacebookLogin },
+  components: { PermissionsDialog, VFacebookLogin },
   props: {
     account: { type: Object, required: false }
   },
@@ -72,7 +85,8 @@ export default {
     loading: false,
     // Connected account information
     model: null,
-    showInvalidTokenWarning: false
+    showInvalidTokenWarning: false,
+    showPermissionsDialog: false
   }),
   methods: {
     // NB: not a computed property as we rely on being able to read an up to date value outside the template.
