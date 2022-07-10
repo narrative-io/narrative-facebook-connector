@@ -41,7 +41,7 @@
             NioTextField(v-model="adAccount.business.name" label="Business" disabled)
           .filter-value(v-else).text-primary-dark
             span
-              span Custom audiences can only be used with ad accounts associted with a business. This ad account is not associated with a business.
+              span Custom audiences can only be used with ad accounts associated with a business. This ad account is not associated with a business.
         .control
           .title-description
             .filter-title.nio-h4.text-primary-darker Terms of Service
