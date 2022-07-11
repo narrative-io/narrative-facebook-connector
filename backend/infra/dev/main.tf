@@ -75,7 +75,7 @@ module "fargate_worker" {
   memory = "8192"
   name_prefix = "${local.name_prefix}-worker"
   private_subnet_ids = local.private_subnet_ids
-  repository_name = local.api_image_repository
+  repository_name = local.worker_image_repository
   security_group_id = module.security_group.aws_security_group_id
   ssm_db_username = local.ssm_db_username
   ssm_db_password = local.ssm_db_password
