@@ -63,8 +63,8 @@ object AudienceParser {
     val field = data.downField("person_name")
     // Facebook's official guidance wrt how to format names:
     // "Use a-z only. Lowercase only, no punctuation. Special characters in UTF-8 format."
-    // 'Use a-z only' would seem to contradict 'Special character in UTF-8 format', so lowercase using the standard
-    // "english" local.
+    // 'Use a-z only' would seem to contradict 'Special character in UTF-8 format', so we just lowercase using the
+    // standard "english" local.
     val first = field.get[String]("given_name").toOption.map(_.toLowerCase(Locale.ENGLISH))
     val last = field.get[String]("family_name").toOption.map(_.toLowerCase(Locale.ENGLISH))
     NameInfo(
