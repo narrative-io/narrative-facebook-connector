@@ -116,15 +116,14 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
     // The below is gross, but is mimicking the official example:
     // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
     val schema = new JsonArray()
-    // NB: we only support MAID deliveries in the MVP
-    schema.add(new JsonPrimitive("MADID"))
+    FacebookAudienceMember.header.foreach(col => schema.add(new JsonPrimitive(col)))
 
     def addBatch(audience: fb.CustomAudience, batch: List[FacebookAudienceMember]): IO[Unit] = {
       logger.info(s"posting ${batch.size} members to facebook audience ${audienceId.value}")
       val data = new JsonArray
       batch.foreach { member =>
         val row = new JsonArray()
-        row.add(new JsonPrimitive(member.maid.getOrElse("")))
+        member.values.foreach(value => row.add(new JsonPrimitive(value)))
         data.add(row)
       }
       val payload = new JsonObject()
