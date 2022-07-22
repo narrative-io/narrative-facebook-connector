@@ -7,6 +7,7 @@ import io.narrative.connectors.facebook.routes.profiles.ProfileRoutes
 import io.narrative.connectors.facebook.routes.tokens.TokenRoutes
 import io.narrative.connectors.facebook.services.{
   ApiClient,
+  FacebookApp,
   FacebookClient,
   KmsKeyId,
   ProfileService,
@@ -35,12 +36,12 @@ object Server extends IOApp.Simple with LazyLogging {
 
   def router(config: Config, resources: Resources): IO[HttpApp[IO]] =
     for {
-      appId <- resources.resolve(config.facebook.appId)
-      appSecret <- resources.resolve(config.facebook.appSecret)
+      appId <- resources.resolve(config.facebook.appId).map(FacebookApp.Id.apply)
+      appSecret <- resources.resolve(config.facebook.appSecret).map(FacebookApp.Secret.apply)
       kmsKeyId <- resources.resolve(config.kms.tokenEncryptionKeyId).map(KmsKeyId.apply)
       apiBaseUri <- resources.resolve(config.narrativeApi.baseUri).map(Uri.unsafeFromString)
       apiClient = new ApiClient(baseUri = apiBaseUri, client = resources.client)
-      fbClient = new FacebookClient(appId = appId, appSecret = appSecret, blocker = resources.blocker)
+      fbClient = new FacebookClient(FacebookApp(appId, appSecret), blocker = resources.blocker)
       profileService = new ProfileService(
         apiClient,
         fbClient,

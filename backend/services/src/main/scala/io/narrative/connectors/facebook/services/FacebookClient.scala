@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
 
 /** A Facebook API wrapper. */
-class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implicit
+class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
     cs: ContextShift[IO],
     timer: Timer[IO]
 ) extends FacebookClient.Ops[IO]
@@ -28,7 +28,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
 
   // Facebook has special support for constructing tokens that allow an app to perform actions by concatenating the
   // app id with the app secreet.
-  private val appToken: FacebookToken = FacebookToken(s"${appId}|${appSecret}")
+  private val appToken: FacebookToken = FacebookToken(s"${app.id.value}|${app.secret.value}")
 
   private val retryPolicy = limitRetries[IO](5).join(exponentialBackoff[IO](10.milliseconds))
 
@@ -196,8 +196,8 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
       accessTokenJson <- runIO(
         new fb.APIRequest(mkContext(accessToken), "oauth", "/access_token", "GET")
           .setParam("grant_type", "fb_exchange_token")
-          .setParam("client_id", appId)
-          .setParam("client_secret", appSecret)
+          .setParam("client_id", app.id.value)
+          .setParam("client_secret", app.secret.value)
           .setParam("fb_exchange_token", accessToken.value)
           .execute()
           .getRawResponseAsJsonObject()
