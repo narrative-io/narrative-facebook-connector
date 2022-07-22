@@ -3,20 +3,12 @@ package io.narrative.connectors.facebook
 import cats.Show
 import cats.data.OptionT
 import cats.effect.IO
-import cats.syntax.option._
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
-import io.circe.Json
 import io.circe.parser.parse
 import io.narrative.connectors.facebook.domain.Command.FileStatus
 import io.narrative.connectors.facebook.domain.{Audience, FileName, Job, Profile}
-import io.narrative.connectors.facebook.services.{
-  AppApiClient,
-  FacebookAudienceMember,
-  FacebookClient,
-  FacebookToken,
-  TokenEncryptionService
-}
+import io.narrative.connectors.facebook.services.{AppApiClient, FacebookClient, FacebookToken, TokenEncryptionService}
 import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate.FileUpdate
 import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore}
 
@@ -46,7 +38,7 @@ class DeliveryProcessor(
       .download(input.job.eventRevision, file(input))
       .through(fs2.text.utf8Decode)
       .through(fs2.text.lines)
-      .map(parse(_).toOption.flatMap(audienceMember))
+      .map(parse(_).toOption.map(AudienceParser.parse))
       .unNone
       .chunkN(FacebookClient.AddToAudienceMaxBatchSize, allowFewer = true)
       .evalMapChunk(chunk => fb.addToAudience(token, audienceId(input), chunk.toList))
@@ -83,19 +75,6 @@ object DeliveryProcessor {
       s"input: revision=${in.job.eventRevision.show}, timestamp=${in.job.eventTimestamp}, audienceId=${audienceId(in).show}, file=${file(in).show}"
     )
   }
-
-  /** Parse a delivered json row to a Facebook audience member. NB: the MVP assumes the delivery is all MAIDs and only
-    * supports purchasing the unique_id attribute.
-    *
-    * Exposed for testing.
-    */
-  def audienceMember(json: Json): Option[FacebookAudienceMember] =
-    json.hcursor
-      .downField("data")
-      .downField("unique_id")
-      .get[String]("value")
-      .toOption
-      .map(idValue => FacebookAudienceMember(maid = idValue.some))
 
   private def audienceId(input: Input): Audience.Id = input.payload match {
     case df: Job.DeliverFile => df.audienceId

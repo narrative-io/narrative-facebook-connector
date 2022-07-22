@@ -12,7 +12,13 @@ import doobie.hikari.HikariTransactor
 import doobie.util.ExecutionContexts
 import io.narrative.common.ssm.SSMResources
 import io.narrative.connectors.facebook.services.AppApiClient.{ClientId, ClientSecret}
-import io.narrative.connectors.facebook.services.{AppApiClient, FacebookClient, KmsKeyId, TokenEncryptionService}
+import io.narrative.connectors.facebook.services.{
+  AppApiClient,
+  FacebookApp,
+  FacebookClient,
+  KmsKeyId,
+  TokenEncryptionService
+}
 import io.narrative.connectors.facebook.stores.{CommandStore, JobStore, ProfileStore, RevisionStore, SettingsStore}
 import org.http4s.Uri
 import org.http4s.blaze.client.BlazeClientBuilder
@@ -78,9 +84,9 @@ object Resources extends LazyLogging {
       contextShift: ContextShift[IO],
       timer: Timer[IO]
   ): IO[FacebookClient.Ops[IO]] = for {
-    id <- resolve(blocker, ssm, config.facebook.appId)
-    secret <- resolve(blocker, ssm, config.facebook.appSecret)
-  } yield new FacebookClient(id, secret, blocker)
+    id <- resolve(blocker, ssm, config.facebook.appId).map(FacebookApp.Id.apply)
+    secret <- resolve(blocker, ssm, config.facebook.appSecret).map(FacebookApp.Secret.apply)
+  } yield new FacebookClient(FacebookApp(id, secret), blocker)
 
   private def transactor(blocker: Blocker, ssm: AWSSimpleSystemsManagement, db: Config.Database)(implicit
       contextShift: ContextShift[IO]
