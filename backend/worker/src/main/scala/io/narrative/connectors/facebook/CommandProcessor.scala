@@ -45,7 +45,7 @@ object CommandProcessor {
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]
 
-  // The input job to process, including a projection of the payload to the required type of "ProcessCommand".
+  /** The input job to process, including a projection of the payload to the required type of "ProcessCommand". */
   final case class Input(job: Job, payload: Job.CommandPayload)
   object Input {
     def apply(job: Job): Option[Input] = job.payload match {

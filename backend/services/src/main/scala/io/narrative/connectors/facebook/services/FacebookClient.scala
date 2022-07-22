@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
 
 /** A Facebook API wrapper. */
-class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implicit
+class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
     cs: ContextShift[IO],
     timer: Timer[IO]
 ) extends FacebookClient.Ops[IO]
@@ -28,7 +28,7 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
 
   // Facebook has special support for constructing tokens that allow an app to perform actions by concatenating the
   // app id with the app secreet.
-  private val appToken: FacebookToken = FacebookToken(s"${appId}|${appSecret}")
+  private val appToken: FacebookToken = FacebookToken(s"${app.id.value}|${app.secret.value}")
 
   private val retryPolicy = limitRetries[IO](5).join(exponentialBackoff[IO](10.milliseconds))
 
@@ -113,23 +113,9 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
       audienceId: Audience.Id,
       members: List[FacebookAudienceMember]
   ): IO[Unit] = {
-    // The below is gross, but is mimicking the official example:
-    // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
-    val schema = new JsonArray()
-    // NB: we only support MAID deliveries in the MVP
-    schema.add(new JsonPrimitive("MADID"))
-
     def addBatch(audience: fb.CustomAudience, batch: List[FacebookAudienceMember]): IO[Unit] = {
       logger.info(s"posting ${batch.size} members to facebook audience ${audienceId.value}")
-      val data = new JsonArray
-      batch.foreach { member =>
-        val row = new JsonArray()
-        row.add(new JsonPrimitive(member.maid.getOrElse("")))
-        data.add(row)
-      }
-      val payload = new JsonObject()
-      payload.add("schema", schema)
-      payload.add("data", data)
+      val payload = mkAddToAudiencePayload(batch)
       val createUser = audience.createUser()
       createUser.setPayload(payload)
       runIO(createUser.execute()).void
@@ -197,8 +183,8 @@ class FacebookClient(appId: String, appSecret: String, blocker: Blocker)(implici
       accessTokenJson <- runIO(
         new fb.APIRequest(mkContext(accessToken), "oauth", "/access_token", "GET")
           .setParam("grant_type", "fb_exchange_token")
-          .setParam("client_id", appId)
-          .setParam("client_secret", appSecret)
+          .setParam("client_id", app.id.value)
+          .setParam("client_secret", app.secret.value)
           .setParam("fb_exchange_token", accessToken.value)
           .execute()
           .getRawResponseAsJsonObject()
@@ -365,6 +351,27 @@ object FacebookClient extends LazyLogging {
       .getOrElse(false)
 
   private def mkContext(accessToken: FacebookToken): fb.APIContext = new fb.APIContext(accessToken.value)
+
+  // The below isn't exactly pretty but is mimicking the official example:
+  // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
+  // Exposed for testing.
+  private[services] def mkAddToAudiencePayload(batch: List[FacebookAudienceMember]): JsonObject = {
+    val schema = new JsonArray()
+    FacebookAudienceMember.header.foreach(col => schema.add(new JsonPrimitive(col)))
+
+    val data = new JsonArray()
+    batch.foreach { member =>
+      val row = new JsonArray()
+      member.values.foreach(value => row.add(new JsonPrimitive(value)))
+      data.add(row)
+    }
+
+    val payload = new JsonObject()
+    payload.add("schema", schema)
+    payload.add("data", data)
+
+    payload
+  }
 
   private def shouldRetry(t: Throwable): Boolean = t match {
     case failedRequest: fb.APIException.FailedRequestException =>

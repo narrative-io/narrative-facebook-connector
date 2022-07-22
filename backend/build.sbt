@@ -90,6 +90,7 @@ lazy val `worker` = project
       Http4s.`http4s-circe`,
       NarrativeBackend.`narrative-common-ssm`,
       NarrativeBackend.`narrative-microframework-config`,
+      Circe.`circe-literal` % "test",
       ScalaTest.`scalatest` % "test"
     )
   )
@@ -109,6 +110,7 @@ lazy val `services` = project
       Http4s.`http4s-circe`,
       NarrativeBackend.`narrative-common-catsretry`,
       NarrativeBackend.`narrative-microframework-config`,
+      Circe.`circe-literal` % "test",
       ScalaTest.`scalatest` % "test"
     )
   )
