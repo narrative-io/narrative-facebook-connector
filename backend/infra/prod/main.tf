@@ -2,7 +2,7 @@ locals {
   app_port = 8080
   api_image_tag = "0.0.12"
   api_image_repository = "narrative-facebook-connector/api"
-  domain_name = "facebook-dev.narrativeconnectors.com"
+  domain_name = "facebook-prod.narrativeconnectors.com"
   name_prefix = "facebook-connector"
   private_subnet_ids = ["subnet-09a370ee67e9c9f54", "subnet-053b7ed0885562762"]
   ssm_db_username = "/${local.stage}/connectors/facebook/api/facebookconnector-db/user"
@@ -11,7 +11,7 @@ locals {
   ssm_narrative_api_secret = "/${local.stage}/connectors/facebook/openapi/secret"
   worker_image_tag = "0.0.12"
   worker_image_repository = "narrative-facebook-connector/worker"
-  stage = "dev"
+  stage = "prod"
   vpc_id = "vpc-11f3c974"
 }
 
