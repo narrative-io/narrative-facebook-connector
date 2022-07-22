@@ -39,9 +39,9 @@ package io.narrative.connectors.facebook.services
   *   Mobile advertiser ID. Facebook schema field: MADID
   */
 final case class FacebookAudienceMember(
-    birthDay: Option[String],
-    birthMonth: Option[String],
-    birthYear: Option[String],
+    birthDay: Option[String] = None,
+    birthMonth: Option[String] = None,
+    birthYear: Option[String] = None,
     country: Option[String] = None,
     email: Option[String] = None,
     firstName: Option[String] = None,

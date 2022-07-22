@@ -3,20 +3,12 @@ package io.narrative.connectors.facebook
 import cats.Show
 import cats.data.OptionT
 import cats.effect.IO
-import cats.syntax.option._
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
-import io.circe.Json
 import io.circe.parser.parse
 import io.narrative.connectors.facebook.domain.Command.FileStatus
 import io.narrative.connectors.facebook.domain.{Audience, FileName, Job, Profile}
-import io.narrative.connectors.facebook.services.{
-  AppApiClient,
-  FacebookAudienceMember,
-  FacebookClient,
-  FacebookToken,
-  TokenEncryptionService
-}
+import io.narrative.connectors.facebook.services.{AppApiClient, FacebookClient, FacebookToken, TokenEncryptionService}
 import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate.FileUpdate
 import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore}
 

@@ -1,10 +1,11 @@
 package io.narrative.connectors.facebook
 
+import cats.syntax.either._
 import cats.syntax.option._
 import io.circe.{ACursor, Json}
 import io.narrative.connectors.facebook.services.FacebookAudienceMember
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.Locale
 
 object AudienceParser {
@@ -39,13 +40,17 @@ object AudienceParser {
       lastInitial: Option[String]
   )
 
-  // todo(mbabic) error handling on LocalDateTime.parse ?
   private def parseBirthInfo(data: ACursor): BirthInfo = {
-    val birthdate = data.get[String]("birthdate").toOption.map(LocalDateTime.parse)
+    val birthdate =
+      data
+        .get[String]("birthdate")
+        .toOption
+        .flatMap(ts => Either.catchNonFatal(Instant.parse(ts)).toOption)
+        .map(LocalDateTime.ofInstant(_, ZoneOffset.UTC))
     val year =
       birthdate.map(_.getYear.toString).orElse(data.get[Long]("birth_year").toOption.map(_.toString)).map(sha256)
-    val month = birthdate.map(_.getMonth).map(String.format(f"%02d", _)).map(sha256)
-    val day = birthdate.map(_.getDayOfMonth).map(String.format(f"%02d", _)).map(sha256)
+    val month = birthdate.map(_.getMonth.getValue).map(m => f"${m}%02d").map(sha256)
+    val day = birthdate.map(_.getDayOfMonth).map(d => f"${d}%02d").map(sha256)
     BirthInfo(year = year, month = month, day = day)
   }
 
