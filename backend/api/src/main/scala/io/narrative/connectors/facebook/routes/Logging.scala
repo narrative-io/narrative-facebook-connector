@@ -12,7 +12,7 @@ object Logging extends LazyLogging {
     // propagate to the response when the server throws an exception.
     errorResponseLogging {
       RequestId.httpApp {
-        // NB: logBody = false as users end us unencrypted Facebook tokens in requests
+        // NB: logBody = false as users send us unencrypted Facebook tokens in requests
         RequestLogger.httpApp(logHeaders = true, logBody = false) {
           ErrorHandling(routes)
         }
