@@ -83,7 +83,7 @@ object FacebookAudienceMember {
     "EMAIL",
     "FN",
     "FI",
-    "GENDER",
+    "GEN",
     "LN",
     "LI",
     "MADID"

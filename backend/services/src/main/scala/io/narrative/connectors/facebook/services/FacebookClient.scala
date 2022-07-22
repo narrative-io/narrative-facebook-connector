@@ -113,22 +113,9 @@ class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
       audienceId: Audience.Id,
       members: List[FacebookAudienceMember]
   ): IO[Unit] = {
-    // The below is gross, but is mimicking the official example:
-    // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
-    val schema = new JsonArray()
-    FacebookAudienceMember.header.foreach(col => schema.add(new JsonPrimitive(col)))
-
     def addBatch(audience: fb.CustomAudience, batch: List[FacebookAudienceMember]): IO[Unit] = {
       logger.info(s"posting ${batch.size} members to facebook audience ${audienceId.value}")
-      val data = new JsonArray
-      batch.foreach { member =>
-        val row = new JsonArray()
-        member.values.foreach(value => row.add(new JsonPrimitive(value)))
-        data.add(row)
-      }
-      val payload = new JsonObject()
-      payload.add("schema", schema)
-      payload.add("data", data)
+      val payload = mkAddToAudiencePayload(batch)
       val createUser = audience.createUser()
       createUser.setPayload(payload)
       runIO(createUser.execute()).void
@@ -364,6 +351,27 @@ object FacebookClient extends LazyLogging {
       .getOrElse(false)
 
   private def mkContext(accessToken: FacebookToken): fb.APIContext = new fb.APIContext(accessToken.value)
+
+  // The below isn't exactly pretty but is mimicking the official example:
+  // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
+  // Exposed for testing.
+  private[services] def mkAddToAudiencePayload(batch: List[FacebookAudienceMember]): JsonObject = {
+    val schema = new JsonArray()
+    FacebookAudienceMember.header.foreach(col => schema.add(new JsonPrimitive(col)))
+
+    val data = new JsonArray()
+    batch.foreach { member =>
+      val row = new JsonArray()
+      member.values.foreach(value => row.add(new JsonPrimitive(value)))
+      data.add(row)
+    }
+
+    val payload = new JsonObject()
+    payload.add("schema", schema)
+    payload.add("data", data)
+
+    payload
+  }
 
   private def shouldRetry(t: Throwable): Boolean = t match {
     case failedRequest: fb.APIException.FailedRequestException =>
