@@ -24,7 +24,6 @@ object AudienceParser {
       firstNameInitial = name.firstInitial,
       gender = parseGender(data),
       lastName = name.last,
-      lastNameInitial = name.lastInitial,
       maid = parseMaid(data)
     )
   }
@@ -36,8 +35,7 @@ object AudienceParser {
   private final case class NameInfo(
       first: Option[String],
       firstInitial: Option[String],
-      last: Option[String],
-      lastInitial: Option[String]
+      last: Option[String]
   )
 
   private def parseBirthInfo(data: ACursor): BirthInfo = {
@@ -75,8 +73,7 @@ object AudienceParser {
     NameInfo(
       first = first.map(sha256),
       firstInitial = first.flatMap(_.headOption).map(_.toString).map(sha256),
-      last = last.map(sha256),
-      lastInitial = last.flatMap(_.headOption).map(_.toString).map(sha256)
+      last = last.map(sha256)
     )
   }
 

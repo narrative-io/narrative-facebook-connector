@@ -32,9 +32,6 @@ package io.narrative.connectors.facebook.services
   * @param lastName
   *   SHA-256 hashed last name. Facebook schema field: LN
   *
-  * @param lastNameInitial
-  *   SHA-256 hashed first initial of last name. Facebook schema field: LI
-  *
   * @param maid
   *   Mobile advertiser ID. Facebook schema field: MADID
   */
@@ -48,7 +45,6 @@ final case class FacebookAudienceMember(
     firstNameInitial: Option[String] = None,
     gender: Option[String] = None,
     lastName: Option[String] = None,
-    lastNameInitial: Option[String] = None,
     maid: Option[String] = None
 ) {
 
@@ -69,7 +65,6 @@ final case class FacebookAudienceMember(
     firstNameInitial.getOrElse(""),
     gender.getOrElse(""),
     lastName.getOrElse(""),
-    lastNameInitial.getOrElse(""),
     maid.getOrElse("")
   )
 }
@@ -85,7 +80,6 @@ object FacebookAudienceMember {
     "FI",
     "GEN",
     "LN",
-    "LI",
     "MADID"
   )
 }
