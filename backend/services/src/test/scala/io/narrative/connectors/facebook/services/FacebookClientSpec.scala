@@ -26,8 +26,6 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
         firstNameInitial = "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb".some,
         // sha256("bowers")
         lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some,
-        // sha256("b")
-        lastNameInitial = "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d".some,
         maid = "966a15b1-6505-4cb7-ba30-3342c5019112".some
       ),
       FacebookAudienceMember(
@@ -53,7 +51,6 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
           "FI",
           "GEN",
           "LN",
-          "LI",
           "MADID"
         ],
         "data": [
@@ -67,7 +64,6 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
             "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
             "",
             "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c",
-            "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
             "966a15b1-6505-4cb7-ba30-3342c5019112"
           ],
           [
@@ -79,7 +75,6 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
             "",
             "",
             "62c66a7a5dd70c3146618063c344e531e6d4b59e379808443ce962b3abd63c5a",
-            "",
             "",
             "966a15b1-6505-4cb7-ba30-3342c5019112"
           ]

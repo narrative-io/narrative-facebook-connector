@@ -473,9 +473,7 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       // sha256("a")
       firstNameInitial = "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb".some,
       // sha256("bowers")
-      lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some,
-      // sha256("b")
-      lastNameInitial = "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d".some
+      lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some
     )
     AudienceParser.parse(firstName) shouldEqual FacebookAudienceMember(
       // sha256("alice")
@@ -485,15 +483,12 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     )
     AudienceParser.parse(lastName) shouldEqual FacebookAudienceMember(
       // sha256("bowers")
-      lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some,
-      // sha256("b")
-      lastNameInitial = "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d".some
+      lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some
     )
     AudienceParser.parse(fullNameOnly) shouldEqual FacebookAudienceMember(
       firstName = none,
       firstNameInitial = none,
-      lastName = none,
-      lastNameInitial = none
+      lastName = none
     )
   }
 
@@ -539,8 +534,6 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       firstNameInitial = "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb".some,
       // sha256("bowers")
       lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some,
-      // sha256("b")
-      lastNameInitial = "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d".some,
       maid = "966a15b1-6505-4cb7-ba30-3342c5019112".some
     )
   }
