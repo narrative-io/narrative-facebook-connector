@@ -2,7 +2,7 @@ locals {
   app_port = 8080
   api_image_tag = "0.0.15"
   api_image_repository = "narrative-facebook-connector/api"
-  domain_name = "facebook-prod.narrativeconnectors.com"
+  domain_name = "facebook.narrativeconnectors.com"
   name_prefix = "facebook-connector"
   private_subnet_ids = ["subnet-09a370ee67e9c9f54", "subnet-053b7ed0885562762"]
   ssm_db_username = "/${local.stage}/connectors/facebook/api/facebookconnector-db/user"
