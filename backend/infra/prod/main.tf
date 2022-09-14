@@ -15,6 +15,22 @@ locals {
   vpc_id = "vpc-11f3c974"
 }
 
+module "alerts-api" {
+  source = "../modules/alerts"
+  stage = local.stage
+  filter_name = "alerts"
+  log_group_name = module.fargate_api.log_group_name
+  log_group_arn = module.fargate_api.log_group_arn
+}
+
+module "alerts-worker" {
+  source = "../modules/alerts"
+  stage = local.stage
+  filter_name = "alerts"
+  log_group_name = module.fargate_worker.log_group_name
+  log_group_arn = module.fargate_worker.log_group_arn
+}
+
 data "aws_ssm_parameter" "datadog_api_key" {
   name = "/shared/datadog/api-key"
   with_decryption = true
