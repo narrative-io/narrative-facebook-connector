@@ -104,6 +104,9 @@ resource "aws_api_gateway_deployment" "_" {
   variables = {
     redeploy = var.api_image_tag
   }
+
+  # not sure if it helps
+  depends_on = [aws_api_gateway_integration._]
 }
 
 output "aws_api_gateway_id" {
