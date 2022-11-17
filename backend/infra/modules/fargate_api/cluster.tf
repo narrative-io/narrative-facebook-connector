@@ -1,6 +1,5 @@
 resource "aws_ecs_cluster" "_" {
   name = "${var.name_prefix}-${var.stage}"
-  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
   setting {
     name  = "containerInsights"
@@ -9,3 +8,9 @@ resource "aws_ecs_cluster" "_" {
 
   tags = {}
 }
+
+resource "aws_ecs_cluster_capacity_providers" "_" {
+  cluster_name = aws_ecs_cluster._.name
+  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+}
+
