@@ -4,7 +4,6 @@ locals {
   api_image_repository = "narrative-facebook-connector/api"
   domain_name = "facebook.narrativeconnectors.com"
   name_prefix = "facebook-connector"
-  private_subnet_ids = ["subnet-09a370ee67e9c9f54", "subnet-053b7ed0885562762"]
   ssm_db_username = "/${local.stage}/connectors/facebook/api/facebookconnector-db/user"
   ssm_db_password = "/${local.stage}/connectors/facebook/api/facebookconnector-db/password"
   ssm_narrative_api_client = "/${local.stage}/connectors/facebook/openapi/client"
@@ -12,7 +11,16 @@ locals {
   worker_image_tag = "0.0.15"
   worker_image_repository = "narrative-facebook-connector/worker"
   stage = "prod"
-  vpc_id = "vpc-11f3c974"
+  vpc_id      = "vpc-081651050f8c197a5"
+
+  private_subnet_ids = [
+    "subnet-0cb2ab40f0b64f414",
+    "subnet-08f5db56f4e2fb0b6",
+    "subnet-0ee858647f53ab935",
+    "subnet-034d755cf159c1210",
+    "subnet-0d23436682672ee7b",
+    "subnet-022e2cec94ba78b83",
+    ]
 }
 
 module "alerts-api" {
