@@ -48,7 +48,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-region: us-east-1
-          role-to-assume: 'arn:aws:iam::704349335716:role/nio-actions-runner'
+          role-to-assume: 'arn:aws:iam::704349335716:role/nio-github-action-runner'
 
       - name: Check formatting
         working-directory: backend
