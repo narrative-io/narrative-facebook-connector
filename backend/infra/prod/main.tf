@@ -13,23 +13,12 @@ locals {
   stage                    = "prod"
 }
 
-data "aws_vpc" "main" {
-  filter {
-    name   = "tag:Name"
-    values = ["main-${local.stage}"]
-  }
+
+module "main_vpc_lookup" {
+  source = "git::git@github.com:narrative-io/narrative-marketplace-devops.git//modules/infra/main-vpc-lookup"
+  stage  = local.stage
 }
 
-data "aws_subnets" "private" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.main.id]
-  }
-
-  tags = {
-    Tier = "private"
-  }
-}
 
 module "alerts-api" {
   source         = "../modules/alerts"
@@ -66,7 +55,7 @@ module "api_gateway" {
   is_public     = true
   name_prefix   = local.name_prefix
   stage         = local.stage
-  vpc_id        = data.aws_vpc.main.id
+  vpc_id        = module.main_vpc_lookup.vpc_id
 }
 
 module "custom_domain" {
@@ -87,14 +76,14 @@ module "fargate_api" {
   image_tag               = local.api_image_tag
   memory                  = "8192"
   name_prefix             = "${local.name_prefix}-api"
-  private_subnet_ids      = data.aws_subnets.private.ids
   repository_name         = local.api_image_repository
   security_group_id       = module.security_group.aws_security_group_id
   ssm_db_username         = local.ssm_db_username
   ssm_db_password         = local.ssm_db_password
   stage                   = local.stage
   token_kms_key_id        = module.iam.token_kms_key_id
-  vpc_id                  = data.aws_vpc.main.id
+  vpc_id                  = module.main_vpc_lookup.vpc_id
+  private_subnet_ids      = module.main_vpc_lookup.private_subnet_ids
 }
 
 module "fargate_worker" {
@@ -106,7 +95,6 @@ module "fargate_worker" {
   image_tag                = local.worker_image_tag
   memory                   = "8192"
   name_prefix              = "${local.name_prefix}-worker"
-  private_subnet_ids       = data.aws_subnets.private.ids
   repository_name          = local.worker_image_repository
   security_group_id        = module.security_group.aws_security_group_id
   ssm_db_username          = local.ssm_db_username
@@ -115,7 +103,8 @@ module "fargate_worker" {
   ssm_narrative_api_secret = local.ssm_narrative_api_secret
   stage                    = local.stage
   token_kms_key_id         = module.iam.token_kms_key_id
-  vpc_id                   = data.aws_vpc.main.id
+  vpc_id                   = module.main_vpc_lookup.vpc_id
+  private_subnet_ids       = module.main_vpc_lookup.private_subnet_ids
 }
 
 module "iam" {
@@ -133,13 +122,13 @@ module "load_balancer" {
   source             = "../modules/lb"
   app_port           = local.app_port
   name_prefix        = local.name_prefix
-  private_subnet_ids = data.aws_subnets.private.ids
   stage              = local.stage
-  vpc_id             = data.aws_vpc.main.id
+  vpc_id             = module.main_vpc_lookup.vpc_id
+  private_subnet_ids = module.main_vpc_lookup.private_subnet_ids
 }
 
 module "security_group" {
   source = "../modules/security_group"
   name   = "${local.name_prefix}-${local.stage}"
-  vpc_id = data.aws_vpc.main.id
+  vpc_id = module.main_vpc_lookup.vpc_id
 }
