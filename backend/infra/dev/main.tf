@@ -14,7 +14,7 @@ locals {
 }
 
 module "main_vpc_lookup" {
-  source = "git::git@github.com:narrative-io/narrative-marketplace-devops.git//modules/infra/main-vpc-lookup"
+  source = "git::git@github.com:narrative-io/narrative-network-infra.git//main-vpc-lookup"
   stage  = local.stage
 }
 
