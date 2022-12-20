@@ -7,10 +7,11 @@ import doobie.ConnectionIO
 import io.narrative.connectors.queue.QueueConsumer
 
 object Main extends IOApp.Simple with LazyLogging {
+  val parallelizationFactor = 1
   override def run: IO[Unit] = {
     val worker = for {
       config <- Resource.eval(Config())
-      resources <- Resources(config)
+      resources <- Resources(config, parallelizationFactor)
       _ <- Resource.eval(run(resources))
     } yield ()
 
@@ -22,7 +23,7 @@ object Main extends IOApp.Simple with LazyLogging {
   private def run(resources: Resources): IO[Unit] =
     (
       resources.eventConsumer.consume(resources.eventProcessor.process(_).map(_ => ())),
-      QueueConsumer.parallelize(resources.queueStore, resources.transactor, 10) { job =>
+      QueueConsumer.parallelize(resources.queueStore, resources.transactor, parallelizationFactor) { job =>
         resources.deliveryProcessor.process(job).to[ConnectionIO]
       }
     ).parMapN((_, _) => ())

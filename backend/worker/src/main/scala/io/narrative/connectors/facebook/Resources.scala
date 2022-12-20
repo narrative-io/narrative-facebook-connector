@@ -35,12 +35,15 @@ final case class Resources(
     transactor: Transactor[IO]
 )
 object Resources extends LazyLogging {
-  def apply(config: Config)(implicit contextShift: ContextShift[IO], timer: Timer[IO]): Resource[IO, Resources] =
+  def apply(config: Config, parallelizationFactor: Int)(implicit
+      contextShift: ContextShift[IO],
+      timer: Timer[IO]
+  ): Resource[IO, Resources] =
     for {
       blocker <- Blocker[IO]
       awsCredentials = new DefaultAWSCredentialsProviderChain()
       ssm <- SSMResources.ssmClient(logger.underlying, blocker, awsCredentials)
-      xa <- transactor(blocker, ssm, config.database)
+      xa <- transactor(blocker, ssm, config.database, parallelizationFactor)
       api <- baseAppApiClient(blocker, config, ssm)
       encryption <- encryptionService(awsCredentials, blocker, config, ssm)
       fb <- Resource.eval(facebookClient(blocker, config, ssm))
@@ -123,7 +126,12 @@ object Resources extends LazyLogging {
     secret <- resolve(blocker, ssm, config.facebook.appSecret).map(FacebookApp.Secret.apply)
   } yield new FacebookClient(FacebookApp(id, secret), blocker)
 
-  private def transactor(blocker: Blocker, ssm: AWSSimpleSystemsManagement, db: Config.Database)(implicit
+  private def transactor(
+      blocker: Blocker,
+      ssm: AWSSimpleSystemsManagement,
+      db: Config.Database,
+      parallelizationFactor: Int
+  )(implicit
       contextShift: ContextShift[IO]
   ): Resource[IO, Transactor[IO]] = for {
     username <- Resource.eval(resolve(blocker, ssm, db.username))
@@ -139,8 +147,8 @@ object Resources extends LazyLogging {
       user = username
     )
     _ <- Resource.eval(
-      IO(xa.kernel.setMaximumPoolSize(100))
-    ) // default is 10; setting it to a reasonably high number should be good enough
+      IO(xa.kernel.setMaximumPoolSize(parallelizationFactor + 2)) // parallel consumers + api polling + settings service
+    )
   } yield xa
 
   private def resolve(blocker: Blocker, ssm: AWSSimpleSystemsManagement, value: Config.Value)(implicit
