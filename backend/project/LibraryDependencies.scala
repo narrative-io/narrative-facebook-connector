@@ -11,7 +11,14 @@ object LibraryDependencies {
   }
 
   object NarrativeDB {
-    val `shared-db-migrations` = "io.narrative" %% "shared-db-migrations" % "0.1.82-SNAPSHOT"
+    val `shared-db-migrations` = "io.narrative" %% "shared-db-migrations" % "0.1.101"
+  }
+
+  object NarrativeConnectorFramework {
+    val version = "0.0.18"
+
+    val `connector-framework-core` =
+      "io.narrative" %% "connector-framework-core" % version
   }
 
   object Aws {

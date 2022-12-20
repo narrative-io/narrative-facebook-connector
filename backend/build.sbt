@@ -90,6 +90,7 @@ lazy val `worker` = project
       Http4s.`http4s-circe`,
       NarrativeBackend.`narrative-common-ssm`,
       NarrativeBackend.`narrative-microframework-config`,
+      NarrativeConnectorFramework.`connector-framework-core`,
       Circe.`circe-literal` % "test",
       ScalaTest.`scalatest` % "test"
     )
@@ -132,6 +133,7 @@ lazy val `stores` = project
       Circe.`circe-generic`,
       Circe.`circe-generic-extras`,
       Circe.`circe-parser`,
+      NarrativeConnectorFramework.`connector-framework-core`,
       ScalaTest.`scalatest` % "test"
     ) ++ Logging.libraryLoggingDependencies
   )
