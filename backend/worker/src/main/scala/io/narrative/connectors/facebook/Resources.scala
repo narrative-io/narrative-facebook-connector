@@ -7,25 +7,32 @@ import com.amazonaws.services.kms.{AWSKMS, AWSKMSClientBuilder}
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest
 import com.typesafe.scalalogging.LazyLogging
-import doobie.Transactor
+import doobie.{ConnectionIO, Transactor}
 import doobie.hikari.HikariTransactor
 import doobie.util.ExecutionContexts
 import io.narrative.common.ssm.SSMResources
+import io.narrative.connectors.api.BaseAppApiClient
+import io.narrative.connectors.api.connections.ConnectionsApi
+import io.narrative.connectors.api.events.{EventConsumer, EventRevisionStore, EventsApi}
+import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
+import io.narrative.connectors.api.files.v1.FilesApiV1
+import io.narrative.connectors.api.files.v2.FilesApiV2
+import io.narrative.connectors.facebook.domain.Job
 import io.narrative.connectors.facebook.services.AppApiClient.{ClientId, ClientSecret}
-import io.narrative.connectors.facebook.services.{
-  AppApiClient,
-  FacebookApp,
-  FacebookClient,
-  KmsKeyId,
-  TokenEncryptionService
-}
-import io.narrative.connectors.facebook.stores.{CommandStore, JobStore, ProfileStore, RevisionStore, SettingsStore}
-import org.http4s.Uri
+import io.narrative.connectors.facebook.services.{FacebookApp, FacebookClient, KmsKeyId, TokenEncryptionService}
+import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore, SettingsStore}
+import io.narrative.connectors.queue.QueueStore
+import io.narrative.connectors.spark.{ParquetTransformer, SparkSessions}
+import io.narrative.microframework.config.Stage
 import org.http4s.blaze.client.BlazeClientBuilder
 
 final case class Resources(
-    commandConsumer: CommandConsumer.Ops[IO],
-    jobProcessor: JobProcessor.Ops[IO]
+    eventConsumer: EventConsumer.Ops[IO],
+    eventProcessor: CommandProcessor.Ops[ConnectionIO],
+    deliveryProcessor: DeliveryProcessor.Ops[IO],
+    queueStore: QueueStore.Ops[Job, ConnectionIO],
+    parquetTransformer: ParquetTransformer,
+    transactor: Transactor[IO]
 )
 object Resources extends LazyLogging {
   def apply(config: Config)(implicit contextShift: ContextShift[IO], timer: Timer[IO]): Resource[IO, Resources] =
@@ -34,36 +41,64 @@ object Resources extends LazyLogging {
       awsCredentials = new DefaultAWSCredentialsProviderChain()
       ssm <- SSMResources.ssmClient(logger.underlying, blocker, awsCredentials)
       xa <- transactor(blocker, ssm, config.database)
-      api <- appApiClient(blocker, config, ssm)
+      api <- baseAppApiClient(blocker, config, ssm)
       encryption <- encryptionService(awsCredentials, blocker, config, ssm)
       fb <- Resource.eval(facebookClient(blocker, config, ssm))
+      sparkSessions <- Resource.eval(SparkSessions.default[IO](blocker))
+      sparkSession <- Resource.eval(sparkSessions.getSparkSession)
 
-      commandStore = CommandStore(xa)
-      jobStore = new JobStore(xa)
+      parquetTransformer = new ParquetTransformer(sparkSession, blocker)
+
+      commandStore = new CommandStore()
       profileStore = ProfileStore(xa)
       settingsStore = SettingsStore(xa)
       settingsService = new SettingsService(encryption, fb, profileStore, settingsStore)
+      jobStore = new QueueStore[Job]
+      revisionStore = new EventRevisionStore
 
-      commandConsumer = new CommandConsumer(api, jobStore, RevisionStore(xa))
+      connectionsApi = new ConnectionsApi(api)
+      filesApiV1 = new FilesApiV1(api)
+      filesApiV2 = new FilesApiV2(api)
+      eventsApi = new EventsApi(api)
+      filesApi = new BackwardsCompatibleFilesApi(blocker, eventsApi, filesApiV1, filesApiV2)
 
-      commandProcessor = new CommandProcessor(api, commandStore, jobStore, settingsService)
-      deliveryProcessor = new DeliveryProcessor(api, commandStore, encryption, fb, profileStore)
-      jobProcessor = new JobProcessor(commandProcessor, deliveryProcessor, jobStore)
+      commandProcessor = new CommandProcessor(commandStore, jobStore, settingsService, connectionsApi, filesApi)
+      deliveryProcessor = new DeliveryProcessor(
+        filesApi,
+        connectionsApi,
+        CommandStore(xa),
+        settingsStore,
+        encryption,
+        fb,
+        profileStore,
+        parquetTransformer,
+        blocker
+      )
+      eventConsumer = new EventConsumer(eventsApi, revisionStore, xa)
+
     } yield Resources(
-      commandConsumer = commandConsumer,
-      jobProcessor = jobProcessor
+      eventConsumer = eventConsumer,
+      eventProcessor = commandProcessor,
+      deliveryProcessor = deliveryProcessor,
+      queueStore = jobStore,
+      parquetTransformer = parquetTransformer,
+      transactor = xa
     )
 
-  private def appApiClient(blocker: Blocker, config: Config, ssm: AWSSimpleSystemsManagement)(implicit
-      contextShift: ContextShift[IO]
-  ): Resource[IO, AppApiClient] =
+  def baseAppApiClient(blocker: Blocker, config: Config, ssm: AWSSimpleSystemsManagement)(implicit
+      cs: ContextShift[IO]
+  ): Resource[IO, BaseAppApiClient.Ops[IO]] =
     for {
-      client <- BlazeClientBuilder[IO](blocker.blockingContext).resource
-      baseUri <- Resource.eval(resolve(blocker, ssm, config.narrativeApi.baseUri)).map(Uri.unsafeFromString)
+      blazeClient <- BlazeClientBuilder[IO](scala.concurrent.ExecutionContext.Implicits.global).resource
       id <- Resource.eval(resolve(blocker, ssm, config.narrativeApi.clientId)).map(ClientId.apply)
       secret <- Resource.eval(resolve(blocker, ssm, config.narrativeApi.clientSecret)).map(ClientSecret.apply)
-      api <- Resource.eval(AppApiClient(baseUri, client, id, secret))
-    } yield api
+
+      narrativeApiClient <- config.stage match {
+        case Stage.Prod => BaseAppApiClient.production(blazeClient, id.value, secret.value)
+        case _          => BaseAppApiClient.development(blazeClient, id.value, secret.value)
+      }
+
+    } yield narrativeApiClient
 
   private def awsKms(awsCredentials: AWSCredentialsProvider): Resource[IO, AWSKMS] =
     Resource.make[IO, AWSKMS](

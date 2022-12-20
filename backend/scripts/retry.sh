@@ -16,14 +16,15 @@ function run-sql {
   psql "postgres://root:${master_password}@${db_host}:5432/facebookconnector" -c "$1"
 }
 function retry {
-  if test -z "$FILE"
-  then
-    run-sql "insert into jobs (event_revision, event_timestamp, quick_settings, profile_id, payload) select event_revision, event_timestamp, quick_settings, profile_id, jsonb_build_object('type', 'process_command', 'subscription_id', payload->>'subscription_id', 'transaction_batch_id', payload->>'transaction_batch_id') from commands where event_revision = ${REVISION};"
-  else
-    run-sql "insert into jobs (event_revision, event_timestamp, quick_settings, profile_id, payload) select event_revision, event_timestamp, quick_settings, profile_id, jsonb_build_object('type', 'deliver_file', 'subscription_id', payload->>'subscription_id', 'transaction_batch_id', payload->>'transaction_batch_id', 'file', '${FILE}') from commands where event_revision = ${REVISION};"
+  SUBSELECT="select jsonb_object_keys(status->'files') as name from commands where event_revision=${REVISION}"
+  SELECT="select jsonb_build_object('type', 'file', 'event_revision', '${REVISION}', 'file', files.name) from ($SUBSELECT) as files"
+
+  if [ -n "$FILE" ]; then
+    SELECT="${SELECT} where files.name='${FILE}'"
   fi
 
-  run-sql "select * from jobs order by created_at desc limit 10;"
+  run-sql "insert into queue (payload) $SELECT;"
+  run-sql "select * from queue order by id limit 10;"
 }
 
 STAGE=$1

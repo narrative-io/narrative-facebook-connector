@@ -24,7 +24,10 @@ object Settings {
     implicit val meta: Meta[Id] = Meta[String].imap(Id.apply)(_.value)
     implicit val show: Show[Id] = Show.show(_.value)
 
-    def apply(profileId: Profile.Id, subscriptionId: SubscriptionId): Id =
+    def fromSubscription(profileId: Profile.Id, subscriptionId: SubscriptionId): Id =
       new Id(s"profile_${profileId.value}:subscription_${subscriptionId.value}")
+
+    def fromConnection(profileId: Profile.Id, connectionId: ConnectionId): Id =
+      new Id(s"profile_${profileId.value}:connection_${connectionId.value}")
   }
 }
