@@ -10,8 +10,12 @@ import java.util.Locale
 
 object AudienceParser {
 
-  def parse(in: Json): FacebookAudienceMember = {
-    val data = in.hcursor.downField("data")
+  // Datasets don't have their fields nested inside "data", like legacy subscriptions do.
+  def parseLegacy(in: Json): FacebookAudienceMember = parse((in: Json) => in.hcursor.downField("data"))(in)
+  def parseDataset(in: Json): FacebookAudienceMember = parse(_.hcursor)(in)
+
+  def parse(downFn: Json => ACursor)(in: Json): FacebookAudienceMember = {
+    val data = downFn(in)
     val birthInfo = parseBirthInfo(data)
     val name = parseName(data)
     FacebookAudienceMember(
