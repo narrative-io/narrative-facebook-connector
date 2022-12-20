@@ -138,6 +138,9 @@ object Resources extends LazyLogging {
       url = jdbcUrl,
       user = username
     )
+    _ <- Resource.eval(
+      IO(xa.kernel.setMaximumPoolSize(100))
+    ) // default is 10; setting it to a reasonably high number should be good enough
   } yield xa
 
   private def resolve(blocker: Blocker, ssm: AWSSimpleSystemsManagement, value: Config.Value)(implicit
