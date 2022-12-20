@@ -1,13 +1,14 @@
 package io.narrative.connectors.facebook
 
 import cats.syntax.option._
+import io.circe.Json
 import io.circe.literal._
 import io.narrative.connectors.facebook.services.FacebookAudienceMember
-import org.scalatest.OptionValues
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
+class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues with EitherValues {
 
   test("parse birth info") {
     val birthDate = json"""
@@ -32,7 +33,7 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(birthDate) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(birthDate) shouldEqual FacebookAudienceMember(
       // sha256("10")
       birthDay = "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5".some,
       // sha256("03")
@@ -40,11 +41,11 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       // sha256("1980")
       birthYear = "051c2e380d07844ffaca43743957f8c0efe2bdf74c6c1e6a9dcccb8d1a3c596b".some
     )
-    AudienceParser.parse(birthYear) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(birthYear) shouldEqual FacebookAudienceMember(
       // sha256("1999")
       birthYear = "ce8457d59078a699acb70416f88155a96a906b7b7aad43708402e3a3bcc8a4b4".some
     )
-    AudienceParser.parse(invalid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(invalid) shouldEqual FacebookAudienceMember(
       birthDay = none,
       birthMonth = none,
       birthYear = none
@@ -67,11 +68,11 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       // sha256("ca")
       country = "6959097001d10501ac7d54c0bdb8db61420f658f2922cc26e46d536119a31126".some
     )
-    AudienceParser.parse(invalid).country shouldEqual none
+    AudienceParser.parseLegacy(invalid).country shouldEqual none
   }
 
   test("parse gender") {
@@ -101,15 +102,15 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(female) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(female) shouldEqual FacebookAudienceMember(
       // sha256("f")
       gender = "252f10c83610ebca1a059c0bae8255eba2f95be4d1d7bcfa89d7248a82d9f111".some
     )
-    AudienceParser.parse(male) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(male) shouldEqual FacebookAudienceMember(
       // sha256("m")
       gender = "62c66a7a5dd70c3146618063c344e531e6d4b59e379808443ce962b3abd63c5a".some
     )
-    AudienceParser.parse(invalid).gender shouldEqual none
+    AudienceParser.parseLegacy(invalid).gender shouldEqual none
   }
 
   test("parse hem from unique_id") {
@@ -134,10 +135,10 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       email = "d64ac45af268c53ea74ad3ef3dbc7102cd0aa9b63cb59456122be981d3bf2ade".some
     )
-    AudienceParser.parse(invalid).email shouldEqual none
+    AudienceParser.parseLegacy(invalid).email shouldEqual none
   }
 
   test("parse hem from hashed_email") {
@@ -162,10 +163,10 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       email = "d64ac45af268c53ea74ad3ef3dbc7102cd0aa9b63cb59456122be981d3bf2ade".some
     )
-    AudienceParser.parse(invalid).email shouldEqual none
+    AudienceParser.parseLegacy(invalid).email shouldEqual none
   }
 
   test("parse hem from sha256") {
@@ -178,7 +179,7 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       }
     }
     """
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       email = "d64ac45af268c53ea74ad3ef3dbc7102cd0aa9b63cb59456122be981d3bf2ade".some
     )
   }
@@ -239,16 +240,16 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(validUniqueIdWithHem) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(validUniqueIdWithHem) shouldEqual FacebookAudienceMember(
       email = "d64ac45af268c53ea74ad3ef3dbc7102cd0aa9b63cb59456122be981d3bf2ade".some
     )
-    AudienceParser.parse(invalidUniqueIdWithHem) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(invalidUniqueIdWithHem) shouldEqual FacebookAudienceMember(
       email = "0b9383907749fcb5121c25f9af1710e192cc521c85f49eeb3742a44bd6af66ea".some
     )
-    AudienceParser.parse(validHemWithSha256) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(validHemWithSha256) shouldEqual FacebookAudienceMember(
       email = "0b9383907749fcb5121c25f9af1710e192cc521c85f49eeb3742a44bd6af66ea".some
     )
-    AudienceParser.parse(invalidHemWithSha256) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(invalidHemWithSha256) shouldEqual FacebookAudienceMember(
       email = "850a1ec9bdbb01c9650344d96e0403fe27b4ce75efbad620b14b47692340bb78".some
     )
   }
@@ -270,10 +271,10 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       }
     }
     """
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       maid = "98c4a93c-0101-4898-90b4-9a15c97150cd".some
     )
-    AudienceParser.parse(invalid).maid shouldEqual none
+    AudienceParser.parseLegacy(invalid).maid shouldEqual none
   }
 
   test("parse maid from idfa") {
@@ -293,10 +294,10 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       }
     }
     """
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       maid = "98c4a93c-0101-4898-90b4-9a15c97150cd".some
     )
-    AudienceParser.parse(invalid).maid shouldEqual none
+    AudienceParser.parseLegacy(invalid).maid shouldEqual none
   }
 
   test("parse maid from maid") {
@@ -316,10 +317,10 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       }
     }
     """
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       maid = "98c4a93c-0101-4898-90b4-9a15c97150cd".some
     )
-    AudienceParser.parse(invalid).maid shouldEqual none
+    AudienceParser.parseLegacy(invalid).maid shouldEqual none
   }
 
   test("parse maid from unique_id") {
@@ -363,16 +364,16 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(adid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(adid) shouldEqual FacebookAudienceMember(
       maid = "966a15b1-6505-4cb7-ba30-3342c5019112".some
     )
-    AudienceParser.parse(idfa) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(idfa) shouldEqual FacebookAudienceMember(
       maid = "4c817c83-61e6-45c1-83d6-17492e04ba97".some
     )
-    AudienceParser.parse(noIdType) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(noIdType) shouldEqual FacebookAudienceMember(
       maid = "98c4a93c-0101-4898-90b4-9a15c97150cd".some
     )
-    AudienceParser.parse(invalid).email shouldEqual none
+    AudienceParser.parseLegacy(invalid).email shouldEqual none
   }
 
   test("parse maid with multiple valid sources") {
@@ -415,13 +416,13 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(validUniqueIdWithIdfa) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(validUniqueIdWithIdfa) shouldEqual FacebookAudienceMember(
       maid = "efd1fd36-1827-41a5-8183-b6230a77613f".some
     )
-    AudienceParser.parse(invalidUniqueIdWithIdfa) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(invalidUniqueIdWithIdfa) shouldEqual FacebookAudienceMember(
       maid = "98c4a93c-0101-4898-90b4-9a15c97150cd".some
     )
-    AudienceParser.parse(validMaidWithIdfa) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(validMaidWithIdfa) shouldEqual FacebookAudienceMember(
       maid = "efd1fd36-1827-41a5-8183-b6230a77613f".some
     )
   }
@@ -467,7 +468,7 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       }
     }
     """
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       // sha256("alice")
       firstName = "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90".some,
       // sha256("a")
@@ -475,17 +476,20 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       // sha256("bowers")
       lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some
     )
-    AudienceParser.parse(firstName) shouldEqual FacebookAudienceMember(
+    isBackwardCompatible(valid)
+    AudienceParser.parseLegacy(firstName) shouldEqual FacebookAudienceMember(
       // sha256("alice")
       firstName = "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90".some,
       // sha256("a")
       firstNameInitial = "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb".some
     )
-    AudienceParser.parse(lastName) shouldEqual FacebookAudienceMember(
+    isBackwardCompatible(firstName)
+    AudienceParser.parseLegacy(lastName) shouldEqual FacebookAudienceMember(
       // sha256("bowers")
       lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some
     )
-    AudienceParser.parse(fullNameOnly) shouldEqual FacebookAudienceMember(
+    isBackwardCompatible(fullNameOnly)
+    AudienceParser.parseLegacy(fullNameOnly) shouldEqual FacebookAudienceMember(
       firstName = none,
       firstNameInitial = none,
       lastName = none
@@ -518,7 +522,8 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
     }
     """
 
-    AudienceParser.parse(valid) shouldEqual FacebookAudienceMember(
+    isBackwardCompatible(valid)
+    AudienceParser.parseLegacy(valid) shouldEqual FacebookAudienceMember(
       // sha256("10")
       birthDay = "4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5".some,
       // sha256("03")
@@ -537,4 +542,9 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues {
       maid = "966a15b1-6505-4cb7-ba30-3342c5019112".some
     )
   }
+
+  def isBackwardCompatible(json: Json) = {
+    AudienceParser.parseLegacy(json) shouldEqual AudienceParser.parseDataset(json.hcursor.get[Json]("data").right.value)
+  }
+
 }

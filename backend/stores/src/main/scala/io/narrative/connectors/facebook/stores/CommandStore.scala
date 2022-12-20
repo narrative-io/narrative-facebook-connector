@@ -10,7 +10,8 @@ import doobie.implicits.legacy.instant._
 import doobie.Fragments.set
 import doobie.util.transactor.Transactor
 import io.circe.syntax._
-import io.narrative.connectors.facebook.domain.{Command, FileName, Profile, Revision, Settings}
+import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
+import io.narrative.connectors.facebook.domain.{Command, FileName, Revision, Settings}
 import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate
 
 import java.time.Instant
@@ -21,10 +22,7 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
          |select
          |  created_at,
          |  event_revision,
-         |  event_timestamp,
-         |  quick_settings,
          |  payload,
-         |  profile_id,
          |  settings_id,
          |  status,
          |  updated_at
@@ -34,10 +32,7 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
         (
             Instant,
             Revision,
-            Instant,
-            Profile.QuickSettings,
-            Command.Payload,
-            Profile.Id,
+            DeliveryEvent,
             Settings.Id,
             Command.Status,
             Instant
@@ -47,10 +42,7 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
         case (
               createdAt,
               eventRevision,
-              eventTimestamp,
-              quickSettings,
               payload,
-              profileId,
               settingsId,
               status,
               updatedAt
@@ -58,10 +50,7 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
           Command(
             createdAt = createdAt,
             eventRevision = eventRevision,
-            eventTimestamp = eventTimestamp,
-            quickSettings = quickSettings,
             payload = payload,
-            profileId = profileId,
             settingsId = settingsId,
             status = status,
             updatedAt = updatedAt
@@ -74,18 +63,12 @@ class CommandStore() extends CommandStore.Ops[ConnectionIO] {
       sql"""
         |insert into commands (
         |  event_revision,
-        |  event_timestamp,
-        |  quick_settings,
         |  payload,
-        |  profile_id,
         |  settings_id,
         |  status
         |) values (
         |  ${nc.eventRevision},
-        |  ${nc.eventTimestamp},
-        |  ${nc.quickSettings},
         |  ${nc.payload},
-        |  ${nc.profileId},
         |  ${nc.settingsId},
         |  ${nc.status}
         |)
@@ -161,10 +144,7 @@ object CommandStore {
 
   final case class NewCommand(
       eventRevision: Revision,
-      eventTimestamp: Instant,
-      quickSettings: Option[Profile.QuickSettings],
-      payload: Command.Payload,
-      profileId: Profile.Id,
+      payload: DeliveryEvent,
       settingsId: Settings.Id,
       status: Command.Status
   )

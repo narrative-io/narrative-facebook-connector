@@ -7,16 +7,14 @@ import doobie.Meta
 import io.circe.{Decoder, DecodingFailure, Encoder, Json}
 import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
 import io.circe.syntax._
+import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
 
 import java.time.Instant
 
 case class Command(
     createdAt: Instant,
     eventRevision: Revision,
-    eventTimestamp: Instant,
-    quickSettings: Profile.QuickSettings,
-    payload: Command.Payload,
-    profileId: Profile.Id,
+    payload: DeliveryEvent,
     settingsId: Settings.Id,
     status: Command.Status,
     updatedAt: Instant
@@ -24,39 +22,6 @@ case class Command(
 object Command {
   import io.narrative.connectors.facebook.codecs.CirceConfig._
   import io.narrative.connectors.facebook.meta.JsonMeta._
-
-  sealed trait Payload
-
-  implicit val decoder: Decoder[Payload] = Decoder.instance(c =>
-    for {
-      typeString <- c.get[String]("type")
-      payload <- typeString match {
-        case "subscription_delivery" => SubscriptionDelivery.decoder.tryDecode(c)
-        case s =>
-          DecodingFailure(
-            s"unexpected command payload type '${s}'. expected one of: subscription_delivery",
-            c.history
-          ).asLeft
-      }
-    } yield payload
-  )
-  implicit val encoder: Encoder[Payload] = Encoder.instance { case sd: SubscriptionDelivery =>
-    SubscriptionDelivery.encoder(sd).deepMerge(Json.obj("type" -> "subscription_delivery".asJson))
-  }
-  implicit val eq: Eq[Payload] = Eq.fromUniversalEquals
-  implicit val meta: Meta[Payload] = jsonbMeta[Payload]
-  implicit val show: Show[Payload] = Show.fromToString
-
-  final case class SubscriptionDelivery(
-      subscriptionId: SubscriptionId,
-      transactionBatchId: TransactionBatchId
-  ) extends Payload
-  object SubscriptionDelivery {
-    implicit val decoder: Decoder[SubscriptionDelivery] = deriveConfiguredDecoder
-    implicit val encoder: Encoder[SubscriptionDelivery] = deriveConfiguredEncoder
-    implicit val eq: Eq[SubscriptionDelivery] = Eq.fromUniversalEquals
-    implicit val show: Show[SubscriptionDelivery] = Show.fromToString
-  }
 
   sealed trait FileStatus
   object FileStatus {
