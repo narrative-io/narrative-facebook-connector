@@ -68,11 +68,11 @@ module "fargate_api" {
   app_port                = local.app_port
   aws_lb_target_group_arn = module.load_balancer.aws_lb_target_group_arn
   aws_iam_role_arn        = module.iam.aws_iam_role_arn
-  cpu                     = "1024"
+  cpu                     = "512"
   desired_count           = 1
   ephemeral_storage       = 128
   image_tag               = local.api_image_tag
-  memory                  = "8192"
+  memory                  = "1024"
   name_prefix             = "${local.name_prefix}-api"
   repository_name         = local.api_image_repository
   security_group_id       = module.security_group.aws_security_group_id
