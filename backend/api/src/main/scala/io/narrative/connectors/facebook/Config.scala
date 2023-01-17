@@ -53,7 +53,7 @@ object Config {
         .map(Config.Literal)
         .getOrElse(
           Config.Literal(
-            s"jdbc:postgresql://facebookconnector-db-${stage}.c4sgf4vjfwdh.us-east-1.rds.amazonaws.com:5432/facebookconnector"
+            s"jdbc:postgresql://facebookconnector-db-proxy-${stage}.proxy-c4sgf4vjfwdh.us-east-1.rds.amazonaws.com:5432/facebookconnector"
           )
         )
     } yield Database(
