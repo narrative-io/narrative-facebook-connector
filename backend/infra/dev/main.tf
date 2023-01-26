@@ -129,4 +129,5 @@ module "security_group" {
   source = "../modules/security_group"
   name   = "${local.name_prefix}-${local.stage}"
   vpc_id = module.main_vpc_lookup.vpc_id
+  app_port           = local.app_port
 }
