@@ -110,4 +110,4 @@ connector will resume the delivery.
 
 ## Known Issues
 
-Highlight any ways in which we know this architecture is deficient and how an operator might be affected.
+_This section is intentionally left blank_
