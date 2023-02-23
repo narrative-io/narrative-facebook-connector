@@ -31,10 +31,6 @@ Audience of this document:
 assume-role sudo terraform init && assume-role sudo terraform apply
 ```
 
-## Running the service
-
-Runs as a set of Fargate services. TODO: list the services
-
 ## Monitoring and Alerts
 
 5** errors returned by the API and any error-level log lines generate alerts in `#auto-techops`.
@@ -90,7 +86,8 @@ This process was painful but well documented:
 A user's Facebook token
 is [long-lived](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived)
 and won't expire on the basis of time, but if they do a forced log out of their account or the user who originally
-granted us permissions churns out of the business that has access to the Ad Account for a delivery then
+granted us permissions churns out of the business that has access to the Ad Account for a delivery then we'll no longer
+be able to deliver data on their behalf.
 
 In this case there's nothing we can do but notify partner success and have the user create a new profile for their
 delivery.

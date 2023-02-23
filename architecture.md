@@ -22,10 +22,8 @@ Audience of this document:
 
 ## Background
 
-TODO
-
-- What the service achieves
-- Who/which services rely on it
+Customers use the Facebook Connector to deliver audience segments they purchase on the marketplace to Facebook for
+use in advertisements.
 
 ## High-Level Logic and Data Flow Diagrams
 
@@ -55,14 +53,13 @@ A customer's basic interaction with the connector is as follows:
        [new Custom Audience in the user's chosen Ad Account](https://developers.facebook.com/docs/marketing-api/reference/custom-audience/)
        using the previously stored long-lived token.
     2.
-    We [parse the incoming data into Facebook's Audience member format](backend/worker/src/main/scala/io/narrative/connectors/facebook/AudienceParser.scala)
-    and use the [marketing API](https://developers.facebook.com/docs/marketing-api/reference/custom-audience/#Updating).
+   We [parse the incoming data into Facebook's Audience member format](backend/worker/src/main/scala/io/narrative/connectors/facebook/AudienceParser.scala)
+   and use the [marketing API](https://developers.facebook.com/docs/marketing-api/reference/custom-audience/#Updating)
+   to deliver data to Facebook.
 
 ## Design Documentation
 
-Links to the relevant design docs that give context about how and why the system evolved this way.
-
-TODO
+_This section is intentionally left blank_
 
 ## Components
 
@@ -77,9 +74,8 @@ the delivery of data to the customer's Facebook Audiences.
 
 ## Architectural Deficiencies
 
-Known architectural deficiencies. Similarly to the operations doc, we can mention non-idempotence here but focus on
-giving that the background and the alternatives and links to docs where we made the decision, like a pseudo ADR).
-
-The duplication with the runbook is obviously not great, but it is the best we can think of right now.
-
-TODO
+- We don't have any automated processes for dealing with customer token expiration: delivery failure turns into an
+  internal alert that we have to pass along to Partner Success in order to get the customer to re-authorize our
+  application. The tokens we use
+  are [long-lived](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/get-long-lived)
+  and don't expire on the basis of time, so this is a pain/risk we accept for now.

@@ -88,10 +88,6 @@ DB_URL=jdbc:postgresql://localhost:5432/facebookconnector ./run-worker.sh
 See [the Worker config](./worker/src/main/scala/io/narrative/connectors/facebook/Config.scala) for more configuration
 options.
 
-## Manual Tests
-
-TODO
-
 ## Relevant Facebook Resources
 
 - [Facebook Marketing API](https://developers.facebook.com/docs/marketing-apis/)
