@@ -1,4 +1,4 @@
-# facebookconnector
+# facebook-connector
 
 A connector allowing users to send audience data to Facebook Custom Audiences inside their platform advertising account.
 
@@ -8,7 +8,7 @@ A connector allowing users to send audience data to Facebook Custom Audiences in
 
 **Table of Contents**
 
-- [facebookconnector](#facebookconnector)
+- [facebook-connector](#facebook-connector)
     - [Project Structure](#project-structure)
     - [Workstation Setup](#workstation-setup)
     - [Build and Automated Tests](#build-and-automated-tests)
