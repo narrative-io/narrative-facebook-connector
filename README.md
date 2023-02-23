@@ -6,7 +6,7 @@ A connector allowing users to send audience data to Facebook Custom Audiences in
 |--------------------------------------|----------------------------------|--------------------|
 | [architecture.md](./architecture.md) | [operations.md](./operations.md) | [infra/](./infra/) |
 
-**Table of Content**
+**Table of Contents**
 
 - [facebookconnector](#facebookconnector)
     - [Project Structure](#project-structure)
