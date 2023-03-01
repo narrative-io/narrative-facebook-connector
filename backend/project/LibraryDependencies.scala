@@ -2,7 +2,7 @@ import sbt._
 
 object LibraryDependencies {
   object NarrativeBackend {
-    val version = "16.1.4"
+    val version = "19.5.4-SNAPSHOT"
     val `narrative-common-ssm` = "io.narrative" %% "common-ssm" % version
     val `narrative-common-catsretry` = "io.narrative" %% "common-catsretry" % version
     val `narrative-common-doobie-testkit` = "io.narrative" %% "common-doobie-testkit" % version
@@ -15,7 +15,7 @@ object LibraryDependencies {
   }
 
   object NarrativeConnectorFramework {
-    val version = "0.0.18"
+    val version = "0.0.197-SNAPSHOT"
 
     val `connector-framework-core` =
       "io.narrative" %% "connector-framework-core" % version
