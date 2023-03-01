@@ -8,7 +8,6 @@ import doobie.ConnectionIO
 import doobie.implicits._
 import io.circe.JsonObject
 import io.circe.syntax.EncoderOps
-
 import io.narrative.connectors.api.connections.ConnectionsApi
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
 import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
@@ -34,24 +33,21 @@ class CommandProcessor(
     EitherT.fromEither[IO](jsonObject.asJson.as[Profile.QuickSettings]).rethrowT
   }.sequence
 
-  override def process(event: CommandProcessorEvent): ConnectionIO[CommandProcessor.Result] = {
+  override def process(event: DeliveryEvent): ConnectionIO[CommandProcessor.Result] = {
     for {
-      _ <- doobie.free.connection.delay(logger.info(s"processing ${event}"))
-      result <- event match {
-        case SnapshotAppendedCPEvent(metadata, snapshotAppended) =>
+      _ <- doobie.free.connection.pure(logger.info(s"processing ${event.show}"))
+      result <- event.payload match {
+        case payload: DeliveryEvent.SnapshotAppended =>
           for {
-            connection <- connectionsApi.connection(snapshotAppended.connectionId).to[ConnectionIO]
+            connection <- connectionsApi.connection(payload.connectionId).to[ConnectionIO]
             quickSettings <- extractQuickSettings(connection.quickSettings).to[ConnectionIO]
 
             settings <- settingsService
               .getOrCreate(
                 quickSettings,
                 Settings.Id
-                  .fromConnection(
-                    Profile.Id.apply(connection.profileId),
-                    ConnectionId.apply(snapshotAppended.connectionId)
-                  ),
-                Audience.Name(s"Connection ${ConnectionId.apply(snapshotAppended.connectionId).show} Audience"),
+                  .fromConnection(Profile.Id.apply(connection.profileId), ConnectionId.apply(payload.connectionId)),
+                Audience.Name(s"Connection ${ConnectionId.apply(payload.connectionId).show} Audience"),
                 Profile.Id.apply(connection.profileId)
               )
               .to[ConnectionIO]
@@ -65,8 +61,8 @@ class CommandProcessor(
             _ <- jobStore.enqueue(newJobs)
             command <- commandStore.upsert(
               CommandStore.NewCommand(
-                eventRevision = Revision(metadata.revision.value),
-                payload = DeliveryEvent(metadata, snapshotAppended),
+                eventRevision = Revision.apply(event.metadata.revision.value),
+                payload = event,
                 settingsId = settings.id,
                 status = Command.Status.ProcessingFiles(files.map(file => FileName(file.name)))
               )
@@ -76,27 +72,22 @@ class CommandProcessor(
               logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
             )
           } yield result
-        case SubscriptionDeliveryCPEvent(metadata, subscriptionDelivery) =>
+        case payload: DeliveryEvent.SubscriptionDelivery =>
           for {
-            quickSettings <- extractQuickSettings(subscriptionDelivery.quickSettings).to[ConnectionIO]
+            quickSettings <- extractQuickSettings(payload.quickSettings).to[ConnectionIO]
             settings <- settingsService
               .getOrCreate(
                 quickSettings,
                 Settings.Id
-                  .fromSubscription(
-                    Profile.Id.apply(subscriptionDelivery.profileId),
-                    SubscriptionId.apply(subscriptionDelivery.subscriptionId)
-                  ),
-                Audience.Name(
-                  s"Subscription ${SubscriptionId.apply(subscriptionDelivery.subscriptionId).show} Audience"
-                ),
-                Profile.Id.apply(subscriptionDelivery.profileId)
+                  .fromSubscription(Profile.Id.apply(payload.profileId), SubscriptionId.apply(payload.subscriptionId)),
+                Audience.Name(s"Subscription ${SubscriptionId.apply(payload.subscriptionId).show} Audience"),
+                Profile.Id.apply(payload.profileId)
               )
               .to[ConnectionIO]
-            files <- filesApi.getFiles(metadata.revision.value).to[ConnectionIO]
+            files <- filesApi.getFiles(event.metadata.revision.value).to[ConnectionIO]
             newJobs = files.map { resp =>
               Job(
-                eventRevision = Revision.apply(metadata.revision.value),
+                eventRevision = Revision.apply(event.metadata.revision.value),
                 file = FileName.apply(resp.name)
               )
             }
@@ -104,13 +95,13 @@ class CommandProcessor(
             command <- commandStore.upsert(
               CommandStore.NewCommand(
                 eventRevision = Revision.apply(event.metadata.revision.value),
-                payload = DeliveryEvent(metadata, subscriptionDelivery),
+                payload = event,
                 settingsId = settings.id,
                 status = Command.Status.ProcessingFiles(files.map(file => FileName(file.name)))
               )
             )
             result = Result(command = command, jobs = newJobs)
-            _ <- doobie.free.connection.delay(
+            _ <- doobie.free.connection.pure(
               logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
             )
           } yield result
@@ -120,24 +111,9 @@ class CommandProcessor(
 }
 
 object CommandProcessor {
-
-  sealed trait CommandProcessorEvent {
-    def metadata: DeliveryEvent.Metadata
-  }
-
-  case class SnapshotAppendedCPEvent(
-      metadata: DeliveryEvent.Metadata,
-      snapshotAppended: DeliveryEvent.SnapshotAppended
-  ) extends CommandProcessorEvent
-
-  case class SubscriptionDeliveryCPEvent(
-      metadata: DeliveryEvent.Metadata,
-      snapshotAppended: DeliveryEvent.SubscriptionDelivery
-  ) extends CommandProcessorEvent
-
   trait ReadOps[F[_]] {}
   trait WriteOps[F[_]] {
-    def process(event: CommandProcessorEvent): F[Result]
+    def process(event: DeliveryEvent): F[Result]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]

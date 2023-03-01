@@ -1,12 +1,9 @@
 package io.narrative.connectors.facebook
 
 import cats.effect.{IO, IOApp, Resource}
-import cats.implicits.catsSyntaxTuple2Parallel
+import cats.implicits._
 import com.typesafe.scalalogging.LazyLogging
 import doobie.ConnectionIO
-
-import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
-import io.narrative.connectors.facebook.CommandProcessor.{SnapshotAppendedCPEvent, SubscriptionDeliveryCPEvent}
 import io.narrative.connectors.queue.QueueConsumer
 
 object Main extends IOApp.Simple with LazyLogging {
@@ -25,18 +22,9 @@ object Main extends IOApp.Simple with LazyLogging {
   // See https://typelevel.org/cats-effect/docs/2.x/datatypes/io#parallelism
   private def run(resources: Resources): IO[Unit] =
     (
-      resources.eventConsumer.consume(event =>
-        event.payload match {
-          case sd: DeliveryEvent.SubscriptionDelivery =>
-            resources.eventProcessor.process(SubscriptionDeliveryCPEvent(event.metadata, sd)).map(_ => ())
-          case sa: DeliveryEvent.SnapshotAppended =>
-            resources.eventProcessor.process(SnapshotAppendedCPEvent(event.metadata, sa)).map(_ => ())
-          case DeliveryEvent.ConnectionCreated(connectionId) =>
-            doobie.free.connection.delay(logger.info(s"Connection-created event [$connectionId] ignored"))
-        }
-      ),
+      resources.eventConsumer.consume(resources.eventProcessor.process(_).map(_ => ())),
       QueueConsumer.parallelize(resources.queueStore, resources.transactor, parallelizationFactor) { job =>
-        resources.deliveryProcessor.processIfDeliverable(job).to[ConnectionIO]
+        resources.deliveryProcessor.process(job).to[ConnectionIO]
       }
     ).parMapN((_, _) => ())
 
