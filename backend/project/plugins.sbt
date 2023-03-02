@@ -5,7 +5,7 @@ resolvers ++= Seq(
   "Narrative Releases plugins" at "s3://s3.amazonaws.com/narrative-artifact-releases"
 )
 
-addSbtPlugin("io.narrative" % "common-build" % "3.2.3")
+addSbtPlugin("io.narrative" % "common-build" % "3.4.0")
 addDependencyTreePlugin
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")

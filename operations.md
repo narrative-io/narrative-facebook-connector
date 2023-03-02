@@ -53,8 +53,7 @@ Logs are stored in CloudWatch.
 
 ### Facebook App Management
 
-Users of the Facebook
-The [Narrative Audience Uploader Facebook app](https://developers.facebook.com/apps/554425321962851/dashboard/?business_id=465873190594197).
+Users of the Facebook Connector are, under the hood, using the [Narrative Audience Uploader Facebook app](https://developers.facebook.com/apps/554425321962851/dashboard/?business_id=465873190594197).
 If you are a not an app administrator and think you should be, ask to be set up as one.
 
 - The app ID is not a secret and is available in
