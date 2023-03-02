@@ -39,6 +39,7 @@ lazy val `api` = project
   .configs(IntegrationTest)
   .settings(Defaults.itSettings)
   .settings(commonSettings)
+  .settings(enableQuickPublish := true)
   .settings(
     fargateAppPort := 8081,
     fargateMainClass := "io.narrative.connectors.facebook.Server",
@@ -72,6 +73,7 @@ lazy val `worker` = project
   .configs(IntegrationTest)
   .settings(Defaults.itSettings)
   .settings(commonSettings)
+  .settings(enableQuickPublish := true)
   .settings(
     fargateAppPort := 8081,
     fargateMainClass := "io.narrative.connectors.facebook.Main",
