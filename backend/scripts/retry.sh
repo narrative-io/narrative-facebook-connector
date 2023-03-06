@@ -41,7 +41,7 @@ case "$STAGE" in
     master_password="narrative"
     ;;
   *)
-    db_host="facebookconnector-db-dev-${STAGE}.dev-c4sgf4vjfwdh.us-east-1.rds.amazonaws.com"
+    db_host="facebookconnector-db-proxy-${STAGE}.proxy-c4sgf4vjfwdh.us-east-1.rds.amazonaws.com"
     master_password=$(ssm /${STAGE}/rds-master-password)
     ;;
 esac
