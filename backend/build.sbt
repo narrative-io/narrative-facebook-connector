@@ -1,11 +1,9 @@
-import scala.collection.generic.SeqForwarder
-import scala.collection.{AbstractSeq, LinearSeq, SeqProxy, SeqViewLike, immutable, mutable}
-
-import LibraryDependencies.{NarrativeBackend, _}
+import LibraryDependencies._
 
 import _root_.io.narrative.build.CommonRepositories._
 
 ThisBuild / resolvers ++= Seq("Narrative Releases" at "s3://s3.amazonaws.com/narrative-artifact-releases")
+ThisBuild / resolvers ++= Seq("Narrative Snapshots" at "s3://s3.amazonaws.com/narrative-artifact-snapshots")
 ThisBuild / publishTo := {
   if (version.value.contains("SNAPSHOT")) Some(NarrativeSnapshots)
   else Some(NarrativeReleases)

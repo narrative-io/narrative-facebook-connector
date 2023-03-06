@@ -5,9 +5,16 @@ import cats.effect.{Blocker, ContextShift, IO}
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.parser.parse
+
 import io.narrative.connectors.api.connections.ConnectionsApi
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
+import io.narrative.connectors.api.events.EventsApi.DeliveryEvent.{SnapshotAppended, SubscriptionDelivery}
 import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
+import io.narrative.connectors.facebook.DeliveryProcessor.{
+  DeliverableEntry,
+  SnapshotAppendedEntry,
+  SubscriptionDeliveryEntry
+}
 import io.narrative.connectors.facebook.domain.Command.FileStatus
 import io.narrative.connectors.facebook.domain.{FileName, Job, Profile, Revision, Settings}
 import io.narrative.connectors.facebook.services.{FacebookClient, FacebookToken, TokenEncryptionService}
@@ -28,41 +35,51 @@ class DeliveryProcessor(
 ) extends DeliveryProcessor.Ops[IO]
     with LazyLogging {
 
-  override def process(job: Job)(implicit cs: ContextShift[IO]): IO[Unit] = {
+  override def processIfDeliverable(job: Job)(implicit cs: ContextShift[IO]): IO[Unit] = {
     val deliverIO = for {
       command <- OptionT(commandStore.command(job.eventRevision))
         .getOrRaise(new RuntimeException(s"could not find command with revision ${job.eventRevision.show}"))
-      settings <- OptionT(settingsStore.settings(command.settingsId))
-        .getOrRaise(new RuntimeException(s"could not find settings with id ${command.settingsId.show}"))
-      profileId <- (command.payload.payload match {
-        case e: DeliveryEvent.SubscriptionDelivery => IO(e.profileId)
-        case e: DeliveryEvent.SnapshotAppended     => connectionsApi.connection(e.connectionId).map(_.profileId)
-      }).map(Profile.Id.apply)
-      profile <- profile_!(profileId)
-      token <- encryption.decrypt(profile.token.encrypted)
-      _ <- deliverFile(job.eventRevision, job, command.payload.payload, settings, token)
-      _ <- markDelivered(job, job.file)
+      _ <- command.payload.payload match {
+        case sd: SubscriptionDelivery => processDeliverable(job, SubscriptionDeliveryEntry(sd, command.settingsId))
+        case sa: SnapshotAppended     => processDeliverable(job, SnapshotAppendedEntry(sa, command.settingsId))
+        case DeliveryEvent.ConnectionCreated(connectionId) =>
+          IO(logger.info(s"Connection-created event [$connectionId] ignored"))
+      }
     } yield ()
 
     deliverIO.handleErrorWith(markFailure(job, job.file, _))
   }
 
+  private def processDeliverable(job: Job, deliverable: DeliverableEntry)(implicit cs: ContextShift[IO]): IO[Unit] =
+    for {
+      settings <- OptionT(settingsStore.settings(deliverable.settingsId))
+        .getOrRaise(new RuntimeException(s"could not find settings with id ${deliverable.settingsId.show}"))
+      profileId <- (deliverable match {
+        case SubscriptionDeliveryEntry(e, _) => IO(e.profileId)
+        case SnapshotAppendedEntry(e, _)     => connectionsApi.connection(e.connectionId).map(_.profileId)
+      }).map(Profile.Id.apply)
+      profile <- profile_!(profileId)
+      token <- encryption.decrypt(profile.token.encrypted)
+      _ <- deliverFile(job.eventRevision, job, deliverable, settings, token)
+      _ <- markDelivered(job, job.file)
+    } yield ()
+
   private def deliverFile(
       eventRevision: Revision,
       job: Job,
-      event: DeliveryEvent.Payload,
+      event: DeliverableEntry,
       settings: Settings,
       token: FacebookToken
   )(implicit
       cs: ContextShift[IO]
   ): IO[Unit] = {
     val (fileResource, parseAudience) = event match {
-      case _: DeliveryEvent.SubscriptionDelivery =>
+      case _: SubscriptionDeliveryEntry =>
         (
           fileApi.downloadFile(eventRevision.value, job.file.value),
           AudienceParser.parseLegacy _
         )
-      case _: DeliveryEvent.SnapshotAppended =>
+      case _: SnapshotAppendedEntry =>
         (
           fileApi.downloadFile(eventRevision.value, job.file.value).flatMap(parquetTransformer.toJson),
           AudienceParser.parseDataset _
@@ -99,9 +116,23 @@ class DeliveryProcessor(
 }
 
 object DeliveryProcessor {
+  sealed trait DeliverableEntry {
+    def settingsId: Settings.Id
+  }
+
+  case class SnapshotAppendedEntry(
+      snapshotAppended: SnapshotAppended,
+      settingsId: Settings.Id
+  ) extends DeliverableEntry
+
+  case class SubscriptionDeliveryEntry(
+      subscriptionDelivery: SubscriptionDelivery,
+      settingsId: Settings.Id
+  ) extends DeliverableEntry
+
   trait ReadOps[F[_]] {}
   trait WriteOps[F[_]] {
-    def process(job: Job)(implicit cs: ContextShift[F]): F[Unit]
+    def processIfDeliverable(job: Job)(implicit cs: ContextShift[F]): F[Unit]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]
