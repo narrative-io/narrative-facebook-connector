@@ -15,7 +15,7 @@ object LibraryDependencies {
   }
 
   object NarrativeConnectorFramework {
-    val version = "0.0.21"
+    val version = "0.0.24"
 
     val `connector-framework-core` =
       "io.narrative" %% "connector-framework-core" % version
@@ -81,7 +81,7 @@ object LibraryDependencies {
   }
 
   object Jackson {
-    val version = "2.11.2"
+    val version = "2.13.3"
     def overrides = Seq(
       "com.fasterxml.jackson.core" % "jackson-databind" % version,
       "com.fasterxml.jackson.core" % "jackson-annotations" % version,
