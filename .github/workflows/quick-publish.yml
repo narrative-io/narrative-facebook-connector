@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         os: [self-hosted]
-        scala: [2.12.16]
-        java: [adopt@1.8]
+        scala: [2.12.18]
+        java: [openjdk@1.17.0]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)

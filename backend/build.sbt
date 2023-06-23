@@ -14,7 +14,6 @@ ThisBuild / usePipelining := true
 name := "narrative-facebook-connector"
 
 val commonSettings = Seq(
-  scalaVersion := "2.12.16",
   scalacOptions ++= Seq(
     "-language:postfixOps"
   ),
@@ -29,6 +28,28 @@ val commonSettings = Seq(
   dependencyOverrides ++= Jackson.overrides
 )
 
+lazy val extraJavaOpts = Seq(
+  "-J-verbose:gc",
+  // JVM >= 17
+  // java.lang.IllegalAccessError: class org.apache.spark.storage.StorageUtils$ (in unnamed module @0xc4e84f7) cannot access class sun.nio.ch.DirectBuffer (in module java.base) because module java.base does not export sun.nio.ch to unnamed module @0xc4e84f7
+  // https://github.com/apache/spark/blob/v3.3.0/launcher/src/main/java/org/apache/spark/launcher/JavaModuleOptions.java
+  "-J-XX:+IgnoreUnrecognizedVMOptions",
+  "-J--add-opens=java.base/java.lang=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.io=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.net=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.nio=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.util=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
+  "-J--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+  "-J--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+  "-J--add-opens=java.base/sun.nio.cs=ALL-UNNAMED",
+  "-J--add-opens=java.base/sun.security.action=ALL-UNNAMED",
+  "-J--add-opens=java.base/sun.util.calendar=ALL-UNNAMED",
+  "-J--add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED"
+)
+
 lazy val `api` = project
   .enablePlugins(AwsFargateDockerPlugin)
   .enablePlugins(JavaAppPackaging)
@@ -41,7 +62,8 @@ lazy val `api` = project
   .settings(
     fargateAppPort := 8081,
     fargateMainClass := "io.narrative.connectors.facebook.Server",
-    fargateImageName := "narrative-facebook-connector/api"
+    fargateImageName := "narrative-facebook-connector/api",
+    Universal / javaOptions ++= extraJavaOpts
   )
   .settings(
     libraryDependencies ++= Logging.applicationLoggingDependencies
@@ -75,7 +97,8 @@ lazy val `worker` = project
   .settings(
     fargateAppPort := 8081,
     fargateMainClass := "io.narrative.connectors.facebook.Main",
-    fargateImageName := "narrative-facebook-connector/worker"
+    fargateImageName := "narrative-facebook-connector/worker",
+    Universal / javaOptions ++= extraJavaOpts
   )
   .settings(
     libraryDependencies ++= Logging.applicationLoggingDependencies
