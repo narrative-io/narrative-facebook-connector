@@ -1,6 +1,6 @@
 locals {
   app_port                 = 8080
-  api_image_tag            = "0.1.7"
+  api_image_tag            = "0.1.9"
   api_image_repository     = "narrative-facebook-connector/api"
   domain_name              = "facebook.narrativeconnectors.com"
   name_prefix              = "facebook-connector"
@@ -8,7 +8,7 @@ locals {
   ssm_db_password          = "/${local.stage}/connectors/facebook/api/facebookconnector-db/password"
   ssm_narrative_api_client = "/${local.stage}/connectors/facebook/openapi/client"
   ssm_narrative_api_secret = "/${local.stage}/connectors/facebook/openapi/secret"
-  worker_image_tag         = "0.1.7"
+  worker_image_tag         = "0.1.9"
   worker_image_repository  = "narrative-facebook-connector/worker"
   stage                    = "prod"
 }
