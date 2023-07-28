@@ -60,7 +60,7 @@ object LibraryDependencies {
   }
 
   object Facebook {
-    val version = "15.0.0"
+    val version = "17.0.0"
     val `facebook-java-business-sdk` = "com.facebook.business.sdk" % "facebook-java-business-sdk" % version
   }
 
