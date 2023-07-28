@@ -1,6 +1,6 @@
 locals {
   app_port                 = 8080
-  api_image_tag            = "0.1.9"
+  api_image_tag            = "0.1.11"
   api_image_repository     = "narrative-facebook-connector/api"
   domain_name              = "facebook.narrativeconnectors.com"
   name_prefix              = "facebook-connector"
@@ -8,7 +8,7 @@ locals {
   ssm_db_password          = "/${local.stage}/connectors/facebook/api/facebookconnector-db/password"
   ssm_narrative_api_client = "/${local.stage}/connectors/facebook/openapi/client"
   ssm_narrative_api_secret = "/${local.stage}/connectors/facebook/openapi/secret"
-  worker_image_tag         = "0.1.9"
+  worker_image_tag         = "0.1.11"
   worker_image_repository  = "narrative-facebook-connector/worker"
   stage                    = "prod"
 }
@@ -24,6 +24,12 @@ module "alerts-api" {
   filter_name    = "alerts"
   log_group_name = module.fargate_api.log_group_name
   log_group_arn  = module.fargate_api.log_group_arn
+}
+
+module "alerts-polling" {
+  source         = "../modules/alerts-polling"
+  stage          = local.stage
+  log_group_name = module.fargate_worker.log_group_name
 }
 
 module "alerts-worker" {
