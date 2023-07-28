@@ -26,6 +26,12 @@ module "alerts-api" {
   log_group_arn  = module.fargate_api.log_group_arn
 }
 
+module "alerts-polling" {
+  source         = "../modules/alerts-polling"
+  stage          = local.stage
+  log_group_name = module.fargate_worker.log_group_name
+}
+
 module "alerts-worker" {
   source         = "../modules/alerts"
   stage          = local.stage
