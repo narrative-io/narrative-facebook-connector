@@ -38,7 +38,7 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
 
     val payload = FacebookClient.mkAddToAudiencePayload(batch)
 
-    parser.parse(payload.toString).right.value shouldEqual
+    parser.parse(payload.toString).getOrElse(throw new IllegalStateException("Expected right value")) shouldEqual
       json"""
       {
         "schema": [

@@ -14,7 +14,7 @@ import retry.RetryPolicies._
 import retry._
 
 import java.time.Instant
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
 
@@ -245,6 +245,7 @@ class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
             // https://developers.facebook.com/docs/graph-api/using-graph-api/error-handling/
             case e: fb.APIException.FailedRequestException if getErrorCode(e).contains(190) =>
               IO.raiseError(InvalidAccessToken)
+            case t => IO.raiseError(t)
           }
       )
     }

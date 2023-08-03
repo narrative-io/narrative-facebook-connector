@@ -55,8 +55,6 @@ lazy val `api` = project
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .enablePlugins(EcrPlugin)
-  .configs(IntegrationTest)
-  .settings(Defaults.itSettings)
   .settings(commonSettings)
   .settings(enableQuickPublish := true)
   .settings(
@@ -90,8 +88,6 @@ lazy val `worker` = project
   .enablePlugins(JavaAppPackaging)
   .enablePlugins(DockerPlugin)
   .enablePlugins(EcrPlugin)
-  .configs(IntegrationTest)
-  .settings(Defaults.itSettings)
   .settings(commonSettings)
   .settings(enableQuickPublish := true)
   .settings(
@@ -121,6 +117,7 @@ lazy val `worker` = project
   .dependsOn(`services`)
 
 lazy val `services` = project
+  .enablePlugins(LibraryProjectPlugin)
   .settings(commonSettings)
   .settings(
     // no need to publish, no consumers of this library
@@ -141,6 +138,7 @@ lazy val `services` = project
   .dependsOn(`stores`)
 
 lazy val `stores` = project
+  .enablePlugins(LibraryProjectPlugin)
   .settings(commonSettings)
   .settings(
     // no need to publish, no consumers of this library

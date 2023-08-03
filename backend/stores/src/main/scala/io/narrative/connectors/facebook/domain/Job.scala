@@ -4,7 +4,6 @@ import cats.{Eq, Show}
 import doobie.Meta
 import io.circe.{Codec, Decoder, Encoder}
 import io.circe.generic.extras.semiauto.deriveConfiguredCodec
-import io.narrative.connectors.facebook.meta.JsonMeta.jsonbMeta
 
 final case class Job(
     eventRevision: Revision,
