@@ -16,44 +16,25 @@ jobs:
       matrix:
         os: [self-hosted]
         scala: [2.12.18]
-        java: [openjdk@1.17.0]
+        java: ["temurin:1.20.0.2"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout current branch (full)
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
+      - name: SBT Cache
+        uses: coursier/cache-action@v6
       - name: Setup Java and Scala
-        uses: olafurpg/setup-scala@v13
+        uses: coursier/setup-action@v1
         with:
-          java-version: ${{ matrix.java }}
-
-      # Non standard: 
-      # We want to make it possible to do quick push/publish cycles while testing changes, so 
-      # we include all target folders in the cache to make the builds faster at the expense of 
-      # correctness. 
-      # In case a build is problematic, just switch to a different branch or tweak the sbt config files 
-      # (the cache is keyed by the branch + key below)
-      - name: Cache sbt
-        uses: actions/cache@v2
-        with:
-          path: |
-            **/target/**
-            ~/.sbt
-            ~/.ivy2/cache
-            ~/.coursier/cache/v1
-            ~/.cache/coursier/v1
-            ~/AppData/Local/Coursier/Cache/v1
-            ~/Library/Caches/Coursier/v1
-          key: ${{ runner.os }}-sbt-cache-v2-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
-
+          jvm: ${{ matrix.java }}
+          apps: sbt sbtn
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-region: us-east-1
           role-to-assume: 'arn:aws:iam::704349335716:role/nio-github-action-runner'
-
       - name: Quick publish
         working-directory: backend
         run: 'sbt ++${{ matrix.scala }} quickPublish'

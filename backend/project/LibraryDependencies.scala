@@ -2,7 +2,7 @@ import sbt._
 
 object LibraryDependencies {
   object NarrativeBackend {
-    val version = "19.21.5"
+    val version = "20.0.1"
     val `narrative-common-ssm` = "io.narrative" %% "common-ssm" % version
     val `narrative-common-catsretry` = "io.narrative" %% "common-catsretry" % version
     val `narrative-common-doobie-testkit` = "io.narrative" %% "common-doobie-testkit" % version
@@ -11,11 +11,11 @@ object LibraryDependencies {
   }
 
   object NarrativeDB {
-    val `shared-db-migrations` = "io.narrative" %% "shared-db-migrations" % "0.1.101"
+    val `shared-db-migrations` = "io.narrative" %% "shared-db-migrations" % "0.2.0"
   }
 
   object NarrativeConnectorFramework {
-    val version = "0.0.30"
+    val version = "0.1.0"
 
     val `connector-framework-core` =
       "io.narrative" %% "connector-framework-core" % version
@@ -39,7 +39,7 @@ object LibraryDependencies {
   }
 
   object Circe {
-    val version = "0.14.1"
+    val version = "0.14.2"
     val `circe-core` = "io.circe" %% "circe-core" % version
     val `circe-generic` = "io.circe" %% "circe-generic" % version
     val `circe-generic-extras` = "io.circe" %% "circe-generic-extras" % version

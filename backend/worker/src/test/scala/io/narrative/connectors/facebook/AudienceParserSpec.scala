@@ -544,7 +544,9 @@ class AudienceParserSpec extends AnyFunSuite with Matchers with OptionValues wit
   }
 
   def isBackwardCompatible(json: Json) = {
-    AudienceParser.parseLegacy(json) shouldEqual AudienceParser.parseDataset(json.hcursor.get[Json]("data").right.value)
+    AudienceParser.parseLegacy(json) shouldEqual AudienceParser.parseDataset(
+      json.hcursor.get[Json]("data").getOrElse(throw new IllegalArgumentException("Expected right value"))
+    )
   }
 
 }
