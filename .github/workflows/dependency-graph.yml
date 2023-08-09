@@ -1,0 +1,29 @@
+name: Update Dependency Graph
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-graph:
+    name: Update Dependency Graph
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - name: SBT Cache
+        uses: coursier/cache-action@v6
+      - name: Setup Java and Scala
+        uses: coursier/setup-action@v1
+        with:
+          jvm: "temurin:1.20.0.2"
+          apps: sbt sbtn
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-region: us-east-1
+          role-to-assume: 'arn:aws:iam::704349335716:role/nio-github-action-runner'
+      - uses: scalacenter/sbt-dependency-submission@v2
+        with:
+          working-directory: ./backend
