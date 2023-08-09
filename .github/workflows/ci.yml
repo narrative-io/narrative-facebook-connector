@@ -43,13 +43,20 @@ jobs:
         run: 'sbt ++${{ matrix.scala }} scalafmtSbtCheck scalafmtCheckAll'
       - name: Build project
         working-directory: backend
-        run: 'sbt ++${{ matrix.scala }} test it:test'
+        run: 'sbt ++${{ matrix.scala }} test'
       - name: Compress target directories
         run: tar cf targets.tar backend/*/target
-      - name: Upload target directories
-        uses: actions/upload-artifact@v2
+      - name: Generate artifact name
+        uses: mad9000/actions-find-and-replace-string@3
+        id: artifactname
         with:
-          name: target-${{ matrix.os }}-${{ matrix.scala }}-${{ matrix.java }}
+          source: targets-${{ matrix.os }}-${{ matrix.scala }}-${{ matrix.java }}
+          find: ':'
+          replace: '_'
+      - name: Upload target directories
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.artifactname.outputs.value }}
           path: targets.tar
 
   changeset:
@@ -91,11 +98,17 @@ jobs:
         with:
           jvm: ${{ matrix.java }}
           apps: sbt sbtn
-      - name: Download target directories (${{ matrix.scala }})
-        uses: actions/download-artifact@v2
+      - name: Generate artifact name
+        uses: mad9000/actions-find-and-replace-string@3
+        id: artifactname
         with:
-          name: target-${{ matrix.os }}-${{ matrix.scala }}-${{ matrix.java }}
-
+          source: targets-${{ matrix.os }}-${{ matrix.scala }}-${{ matrix.java }}
+          find: ':'
+          replace: '_'
+      - name: Download target directories (${{ matrix.scala }})
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ steps.artifactname.outputs.value }}
       - name: Inflate target directories (${{ matrix.scala }})
         run: |
           tar xf targets.tar
