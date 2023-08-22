@@ -168,7 +168,7 @@ EOF
 python presign.py narrative-tmp dev/${your_name}/debug/thread_dump.txt
 ```
 
-3. **On the Fargate instance**, use the pres-igned URL to upload the file to S3:
+3. **On the Fargate instance**, use the pre-signed URL to upload the file to S3:
 
 ```bash
 # Make sure to quote the presigned url.
