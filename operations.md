@@ -10,18 +10,20 @@ Audience of this document:
 **Table of Content**
 
 <!-- TOC -->
+
 * [Operations](#operations)
-  * [Deployment](#deployment)
-  * [Monitoring and Alerts](#monitoring-and-alerts)
-  * [Logs](#logs)
-  * [Related Processes](#related-processes)
-    * [Facebook App Management](#facebook-app-management)
-    * [Facebook App Review](#facebook-app-review)
-  * [Troubleshooting/Failure Handling](#troubleshootingfailure-handling)
-    * [Facebook Token Expiration](#facebook-token-expiration)
-    * [Taking a Thread Dump](#taking-a-thread-dump)
-    * [Retrying a Delivery](#retrying-a-delivery)
-  * [Known Issues](#known-issues)
+    * [Deployment](#deployment)
+    * [Monitoring and Alerts](#monitoring-and-alerts)
+    * [Logs](#logs)
+    * [Related Processes](#related-processes)
+        * [Facebook App Management](#facebook-app-management)
+        * [Facebook App Review](#facebook-app-review)
+    * [Troubleshooting/Failure Handling](#troubleshootingfailure-handling)
+        * [Facebook Token Expiration](#facebook-token-expiration)
+        * [Taking a Thread Dump](#taking-a-thread-dump)
+        * [Retrying a Delivery](#retrying-a-delivery)
+    * [Known Issues](#known-issues)
+
 <!-- TOC -->
 
 ## Deployment
@@ -55,7 +57,8 @@ Logs are stored in CloudWatch.
 
 ### Facebook App Management
 
-Users of the Facebook Connector are, under the hood, using the [Narrative Audience Uploader Facebook app](https://developers.facebook.com/apps/554425321962851/dashboard/?business_id=465873190594197).
+Users of the Facebook Connector are, under the hood, using
+the [Narrative Audience Uploader Facebook app](https://developers.facebook.com/apps/554425321962851/dashboard/?business_id=465873190594197).
 If you are a not an app administrator and think you should be, ask to be set up as one.
 
 - The app ID is not a secret and is available in
