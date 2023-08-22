@@ -9,18 +9,20 @@ Audience of this document:
 
 **Table of Content**
 
-- [Operations](#operations)
-    - [Deployment](#deployment)
-    - [Running the service](#running-the-service)
-    - [Monitoring and Alerts](#monitoring-and-alerts)
-    - [Logs](#logs)
-    - [Related Processes](#related-processes)
-        - [Facebook App Management](#facebook-app-management)
-        - [Facebook App Review](#facebook-app-review)
-    - [Troubleshooting/Failure Handling](#troubleshootingfailure-handling)
-        - [Facebook Token Expiration](#facebook-token-expiration)
-        - [Retrying a Delivery](#retrying-a-delivery)
-    - [Known Issues](#known-issues)
+<!-- TOC -->
+* [Operations](#operations)
+  * [Deployment](#deployment)
+  * [Monitoring and Alerts](#monitoring-and-alerts)
+  * [Logs](#logs)
+  * [Related Processes](#related-processes)
+    * [Facebook App Management](#facebook-app-management)
+    * [Facebook App Review](#facebook-app-review)
+  * [Troubleshooting/Failure Handling](#troubleshootingfailure-handling)
+    * [Facebook Token Expiration](#facebook-token-expiration)
+    * [Taking a Thread Dump](#taking-a-thread-dump)
+    * [Retrying a Delivery](#retrying-a-delivery)
+  * [Known Issues](#known-issues)
+<!-- TOC -->
 
 ## Deployment
 
@@ -90,6 +92,94 @@ be able to deliver data on their behalf.
 
 In this case there's nothing we can do but notify partner success and have the user create a new profile for their
 delivery.
+
+### Taking a Thread Dump
+
+If for some reason you need to connect to a running Fargate task and take a thread dump, you can do so as follows:
+
+1. Get a shell on a running task instance:
+
+```bash
+aws ecs list-tasks --cluster facebook-connector-${task_type}-prod | cat
+```
+
+E.g., to list worker tasks:
+
+```bash
+aws ecs list-tasks --cluster facebook-connector-worker-prod | cat
+```
+
+2. Connect to a task:
+
+```bash
+aws ecs execute-command  \
+  --cluster facebook-connector-${task_type}-prod \
+  --task ${task_id} \
+  --container externalapi-prod \
+  --command "/bin/bash" \
+  --interactive
+```
+
+E.g.,
+
+```bash
+awsume sudo
+aws ecs execute-command  \
+  --cluster facebook-connector-worker-prod \
+  --task $(aws ecs list-tasks --cluster facebook-connector-worker-prod | jq -r '.taskArns[0]' | awk -F/ '{print $NF}') \
+  --container facebook-connector-worker-prod  \
+  --command "/bin/bash" \
+  --interactive
+```
+
+3. On the task instance, run:
+
+```bash
+microdnf install sudo
+sudo -u demiourgos728 /usr/java/openjdk-17/bin/jstack -l 1 > /tmp/thread_dump.txt
+```
+
+You can then inspect the thread dump at `/tmp/thread_dump.txt`.
+
+(Optional) You can egress the thread dump from the instance for local examination. It's incredibly janky, but it works.
+
+1. **On your machine** use the following handy script to pre-sign an S3 url, making sure to run `pip install boto3` if
+   you haven't already. This is unfortunately necessary as the AWS CLI only lets you pre-sign URLs for _download_.
+
+```bash
+cat << 'EOF' > presign.py
+import boto3
+import sys
+
+s3 = boto3.client('s3')
+
+bucket = sys.argv[1]
+key = sys.argv[2]
+
+print(
+  s3.generate_presigned_url('put_object', Params={'Bucket':bucket,'Key':key}, ExpiresIn=3600, HttpMethod='PUT')
+)
+EOF
+```
+
+2. **On your machine** generate a presigned URL using the script:
+
+```bash
+python presign.py narrative-tmp dev/${your_name}/debug/thread_dump.txt
+```
+
+3. **On the Fargate instance**, use the pres-igned URL to upload the file to S3:
+
+```bash
+# Make sure to quote the presigned url.
+curl -vvv --upload-file /tmp/thread_dump.txt "${pre_signed_url}"
+```
+
+4. Download the thread dump to your machine:
+
+```bash
+aws s3 cp s3://narrative-tmp/dev/$[your_name}/debug/thread_dump.txt .
+```
 
 ### Retrying a Delivery
 
