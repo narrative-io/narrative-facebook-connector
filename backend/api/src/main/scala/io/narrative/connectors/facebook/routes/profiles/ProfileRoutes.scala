@@ -11,9 +11,7 @@ import org.http4s._
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.dsl.io._
 
-class ProfileRoutes(service: ProfileService.Ops[IO])(implicit
-    contextShift: ContextShift[IO]
-) extends LazyLogging {
+class ProfileRoutes(service: ProfileService.Ops[IO]) extends LazyLogging {
 
   val routes: HttpRoutes[IO] = Auth.auth {
     case GET -> Root as auth                            => profiles(auth)

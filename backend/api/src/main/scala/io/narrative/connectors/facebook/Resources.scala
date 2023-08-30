@@ -11,39 +11,31 @@ import doobie.Transactor
 import doobie.hikari.HikariTransactor
 import doobie.util.ExecutionContexts
 import io.narrative.common.ssm.SSMResources
-import org.http4s.blaze.client.BlazeClientBuilder
+import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.client.Client
-
-import scala.concurrent.ExecutionContext
 
 final case class Resources(
     awsCredentials: AWSCredentialsProvider,
-    blocker: Blocker,
     client: Client[IO],
     kms: AWSKMS,
-    serverEC: ExecutionContext,
     ssm: AWSSimpleSystemsManagement,
     xa: Transactor[IO]
 ) {
   def resolve(value: Config.Value): IO[String] =
-    Resources.resolve(blocker, ssm, value)
+    Resources.resolve(ssm, value)
 }
 object Resources extends LazyLogging {
   def apply(config: Config): Resource[IO, Resources] =
     for {
-      blocker <- Resource.unit[IO]
-      awsCredentials = new DefaultAWSCredentialsProviderChain()
-      client <- BlazeClientBuilder[IO](blocker.blockingContext).resource
-      serverEC <- ExecutionContexts.fixedThreadPool[IO](64)
-      ssm <- SSMResources.ssmClient(logger.underlying, blocker, awsCredentials)
+      awsCredentials <- Resource.eval(IO.blocking(new DefaultAWSCredentialsProviderChain()))
+      client <- EmberClientBuilder.default[IO].build
+      ssm <- SSMResources.ssmClient(logger.underlying, awsCredentials)
       kms <- awsKms(awsCredentials)
-      xa <- transactor(blocker, ssm, config.database)
+      xa <- transactor(ssm, config.database)
     } yield Resources(
       awsCredentials = awsCredentials,
-      blocker = blocker,
       client = client,
       kms = kms,
-      serverEC = serverEC,
       ssm = ssm,
       xa = xa
     )
@@ -54,12 +46,11 @@ object Resources extends LazyLogging {
     )(kms => IO(kms.shutdown()))
 
   def transactor(ssm: AWSSimpleSystemsManagement, db: Config.Database): Resource[IO, Transactor[IO]] = for {
-    username <- Resource.eval(resolve(blocker, ssm, db.username))
-    password <- Resource.eval(resolve(blocker, ssm, db.password))
-    jdbcUrl <- Resource.eval(resolve(blocker, ssm, db.jdbcUrl))
+    username <- Resource.eval(resolve(ssm, db.username))
+    password <- Resource.eval(resolve(ssm, db.password))
+    jdbcUrl <- Resource.eval(resolve(ssm, db.jdbcUrl))
     connectEC <- ExecutionContexts.fixedThreadPool[IO](32)
     xa <- HikariTransactor.newHikariTransactor[IO](
-      blocker = blocker,
       connectEC = connectEC,
       driverClassName = "org.postgresql.Driver",
       pass = password,
@@ -73,8 +64,7 @@ object Resources extends LazyLogging {
       case Config.Literal(value) =>
         IO.pure(value)
       case Config.SsmParam(value, encrypted) =>
-        blocker
-          .blockOn(IO(ssm.getParameter(new GetParameterRequest().withName(value).withWithDecryption(encrypted))))
+        IO.blocking(ssm.getParameter(new GetParameterRequest().withName(value).withWithDecryption(encrypted)))
           .map(_.getParameter.getValue)
           .attempt
           .map {

@@ -2,8 +2,7 @@ package io.narrative.connectors.facebook.services
 
 import cats.{Eq, Show}
 import cats.effect.IO
-import cats.syntax.applicativeError._
-import cats.syntax.option._
+import cats.implicits._
 import com.typesafe.scalalogging.LazyLogging
 import fs2.Stream
 import io.circe.{Decoder, Encoder}

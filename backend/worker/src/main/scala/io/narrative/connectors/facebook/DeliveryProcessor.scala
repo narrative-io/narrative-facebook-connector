@@ -4,8 +4,8 @@ import cats.data.OptionT
 import cats.effect.IO
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
+import fs2.io.file.Flags
 import io.circe.parser.parse
-
 import io.narrative.connectors.api.connections.ConnectionsApi
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent.{SnapshotAppended, SubscriptionDelivery}
@@ -30,8 +30,7 @@ class DeliveryProcessor(
     encryption: TokenEncryptionService.Ops[IO],
     fb: FacebookClient.Ops[IO],
     profileStore: ProfileStore.Ops[IO],
-    parquetTransformer: ParquetTransformer,
-    blocker: Blocker
+    parquetTransformer: ParquetTransformer
 ) extends DeliveryProcessor.Ops[IO]
     with LazyLogging {
 
@@ -85,8 +84,9 @@ class DeliveryProcessor(
     }
     fileResource.use { path =>
       fs2.io.file
-        .readAll[IO](path, blocker, 65536)
-        .through(fs2.text.utf8Decode)
+        .Files[IO]
+        .readAll(fs2.io.file.Path.fromNioPath(path), 65536, Flags.Read)
+        .through(fs2.text.utf8.decode)
         .through(fs2.text.lines)
         .map(parse(_).toOption.map(parseAudience))
         .unNone
@@ -130,7 +130,7 @@ object DeliveryProcessor {
 
   trait ReadOps[F[_]] {}
   trait WriteOps[F[_]] {
-    def processIfDeliverable(job: Job)(implicit cs: ContextShift[F]): F[Unit]
+    def processIfDeliverable(job: Job): F[Unit]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]

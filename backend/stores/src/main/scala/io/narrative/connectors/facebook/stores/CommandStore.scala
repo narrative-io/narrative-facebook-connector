@@ -6,7 +6,6 @@ import cats.syntax.functor._
 import doobie.ConnectionIO
 import doobie.implicits._
 import doobie.postgres.implicits._
-import doobie.implicits.legacy.instant._
 import doobie.Fragments.set
 import doobie.util.transactor.Transactor
 import io.circe.syntax._

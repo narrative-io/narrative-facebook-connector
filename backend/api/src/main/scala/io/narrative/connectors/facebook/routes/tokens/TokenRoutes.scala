@@ -8,7 +8,7 @@ import org.http4s._
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.dsl.io._
 
-class TokenRoutes(service: ProfileService.Ops[IO])(implicit contextShift: ContextShift[IO]) extends LazyLogging {
+class TokenRoutes(service: ProfileService.Ops[IO]) extends LazyLogging {
 
   val routes: HttpRoutes[IO] = Auth.noauth { case req @ POST -> Root / "metadata" =>
     tokenMeta(req)
