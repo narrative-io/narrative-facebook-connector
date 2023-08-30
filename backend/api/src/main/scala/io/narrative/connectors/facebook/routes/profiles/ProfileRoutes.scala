@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook.routes.profiles
 
 import cats.data.{EitherT, OptionT}
-import cats.effect.{ContextShift, IO}
+import cats.effect.IO
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.domain.Profile

@@ -1,6 +1,6 @@
 package io.narrative.connectors.facebook
 
-import cats.effect.{Blocker, ContextShift, IO, Resource}
+import cats.effect.{IO, Resource}
 import com.amazonaws.auth.{AWSCredentialsProvider, DefaultAWSCredentialsProviderChain}
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.kms.{AWSKMS, AWSKMSClientBuilder}
@@ -25,13 +25,13 @@ final case class Resources(
     ssm: AWSSimpleSystemsManagement,
     xa: Transactor[IO]
 ) {
-  def resolve(value: Config.Value)(implicit contextShift: ContextShift[IO]): IO[String] =
+  def resolve(value: Config.Value): IO[String] =
     Resources.resolve(blocker, ssm, value)
 }
 object Resources extends LazyLogging {
-  def apply(config: Config)(implicit contextShift: ContextShift[IO]): Resource[IO, Resources] =
+  def apply(config: Config): Resource[IO, Resources] =
     for {
-      blocker <- Blocker[IO]
+      blocker <- Resource.unit[IO]
       awsCredentials = new DefaultAWSCredentialsProviderChain()
       client <- BlazeClientBuilder[IO](blocker.blockingContext).resource
       serverEC <- ExecutionContexts.fixedThreadPool[IO](64)
@@ -53,9 +53,7 @@ object Resources extends LazyLogging {
       IO(AWSKMSClientBuilder.standard().withRegion(Regions.US_EAST_1).withCredentials(awsCredentials).build())
     )(kms => IO(kms.shutdown()))
 
-  def transactor(blocker: Blocker, ssm: AWSSimpleSystemsManagement, db: Config.Database)(implicit
-      contextShift: ContextShift[IO]
-  ): Resource[IO, Transactor[IO]] = for {
+  def transactor(ssm: AWSSimpleSystemsManagement, db: Config.Database): Resource[IO, Transactor[IO]] = for {
     username <- Resource.eval(resolve(blocker, ssm, db.username))
     password <- Resource.eval(resolve(blocker, ssm, db.password))
     jdbcUrl <- Resource.eval(resolve(blocker, ssm, db.jdbcUrl))
@@ -70,9 +68,7 @@ object Resources extends LazyLogging {
     )
   } yield xa
 
-  def resolve(blocker: Blocker, ssm: AWSSimpleSystemsManagement, value: Config.Value)(implicit
-      contextShift: ContextShift[IO]
-  ): IO[String] =
+  def resolve(ssm: AWSSimpleSystemsManagement, value: Config.Value): IO[String] =
     value match {
       case Config.Literal(value) =>
         IO.pure(value)

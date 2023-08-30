@@ -1,6 +1,6 @@
 package io.narrative.connectors.facebook.services
 
-import cats.effect.{Blocker, ContextShift, IO}
+import cats.effect.IO
 import com.amazonaws.services.kms.AWSKMS
 import com.amazonaws.services.kms.model.{DecryptRequest, EncryptRequest}
 import io.narrative.connectors.facebook.domain.Token

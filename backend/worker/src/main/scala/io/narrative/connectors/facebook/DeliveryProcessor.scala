@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook
 
 import cats.data.OptionT
-import cats.effect.{Blocker, ContextShift, IO}
+import cats.effect.IO
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
 import io.circe.parser.parse
@@ -35,7 +35,7 @@ class DeliveryProcessor(
 ) extends DeliveryProcessor.Ops[IO]
     with LazyLogging {
 
-  override def processIfDeliverable(job: Job)(implicit cs: ContextShift[IO]): IO[Unit] = {
+  override def processIfDeliverable(job: Job): IO[Unit] = {
     val deliverIO = for {
       command <- OptionT(commandStore.command(job.eventRevision))
         .getOrRaise(new RuntimeException(s"could not find command with revision ${job.eventRevision.show}"))
@@ -50,7 +50,7 @@ class DeliveryProcessor(
     deliverIO.handleErrorWith(markFailure(job, job.file, _))
   }
 
-  private def processDeliverable(job: Job, deliverable: DeliverableEntry)(implicit cs: ContextShift[IO]): IO[Unit] =
+  private def processDeliverable(job: Job, deliverable: DeliverableEntry): IO[Unit] =
     for {
       settings <- OptionT(settingsStore.settings(deliverable.settingsId))
         .getOrRaise(new RuntimeException(s"could not find settings with id ${deliverable.settingsId.show}"))
@@ -70,8 +70,6 @@ class DeliveryProcessor(
       event: DeliverableEntry,
       settings: Settings,
       token: FacebookToken
-  )(implicit
-      cs: ContextShift[IO]
   ): IO[Unit] = {
     val (fileResource, parseAudience) = event match {
       case _: SubscriptionDeliveryEntry =>

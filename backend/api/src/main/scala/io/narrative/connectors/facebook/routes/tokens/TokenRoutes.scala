@@ -1,6 +1,6 @@
 package io.narrative.connectors.facebook.routes.tokens
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.IO
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.routes.Auth
 import io.narrative.connectors.facebook.services.{ProfileService, TokenMetaRequest}

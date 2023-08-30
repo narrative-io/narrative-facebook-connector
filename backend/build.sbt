@@ -10,6 +10,7 @@ ThisBuild / publishTo := {
 }
 ThisBuild / exportPipelining := false
 ThisBuild / usePipelining := true
+//ThisBuild / scalacOptions += "-P:semanticdb:synthetics:on"
 
 name := "narrative-facebook-connector"
 

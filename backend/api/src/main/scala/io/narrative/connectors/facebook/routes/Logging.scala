@@ -7,7 +7,7 @@ import org.http4s.{HttpApp, Response}
 import org.http4s.server.middleware._
 
 object Logging extends LazyLogging {
-  def apply(routes: HttpApp[IO])(implicit cs: ContextShift[IO]): HttpApp[IO] = {
+  def apply(routes: HttpApp[IO]): HttpApp[IO] = {
     // The order that these middleware are stacked matters. Any other combination and the X-Request-ID header won't
     // propagate to the response when the server throws an exception.
     errorResponseLogging {

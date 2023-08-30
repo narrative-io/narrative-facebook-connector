@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook.services
 
 import cats.data.NonEmptyList
-import cats.effect.{Blocker, ContextShift, IO, Timer}
+import cats.effect.IO
 import cats.instances.list._
 import cats.syntax.show._
 import cats.syntax.traverse._
@@ -17,11 +17,12 @@ import java.time.Instant
 import scala.jdk.CollectionConverters._
 import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
+import cats.effect.Temporal
 
 /** A Facebook API wrapper. */
 class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
     cs: ContextShift[IO],
-    timer: Timer[IO]
+    timer: Temporal[IO]
 ) extends FacebookClient.Ops[IO]
     with LazyLogging {
   import FacebookClient._
