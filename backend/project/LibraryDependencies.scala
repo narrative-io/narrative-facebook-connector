@@ -2,7 +2,7 @@ import sbt._
 
 object LibraryDependencies {
   object NarrativeBackend {
-    val version = "20.0.1"
+    val version = "20.0.21"
     val `narrative-common-ssm` = "io.narrative" %% "common-ssm" % version
     val `narrative-common-catsretry` = "io.narrative" %% "common-catsretry" % version
     val `narrative-common-doobie-testkit` = "io.narrative" %% "common-doobie-testkit" % version
@@ -15,7 +15,7 @@ object LibraryDependencies {
   }
 
   object NarrativeConnectorFramework {
-    val version = "0.1.0"
+    val version = "0.1.1"
 
     val `connector-framework-core` =
       "io.narrative" %% "connector-framework-core" % version
@@ -29,31 +29,32 @@ object LibraryDependencies {
   }
 
   object Cats {
-    val `cats-core` = "org.typelevel" %% "cats-core" % "2.8.0"
-    val `cats-effect` = "org.typelevel" %% "cats-effect" % "2.5.4"
+    val `cats-core` = "org.typelevel" %% "cats-core" % "2.9.0"
+    val `cats-effect` = "org.typelevel" %% "cats-effect" % "3.5.1"
   }
 
   object CatsRetry {
-    val version = "2.1.1"
+    val version = "3.1.0"
     val `cats-retry` = "com.github.cb372" %% "cats-retry" % version
   }
 
   object Circe {
-    val version = "0.14.2"
+    val version = "0.14.5"
     val `circe-core` = "io.circe" %% "circe-core" % version
     val `circe-generic` = "io.circe" %% "circe-generic" % version
-    val `circe-generic-extras` = "io.circe" %% "circe-generic-extras" % version
+    val `circe-generic-extras` = "io.circe" %% "circe-generic-extras" % "0.14.3"
     val `circe-literal` = "io.circe" %% "circe-literal" % version
     val `circe-parser` = "io.circe" %% "circe-parser" % version
   }
 
   object CirceFs2 {
-    val version = "0.13.0"
+    // TODO: migrate to https://fs2-data.gnieh.org/documentation/json/libraries/#circe
+    val version = "0.14.1"
     val `circe-fs2` = "io.circe" %% "circe-fs2" % version
   }
 
   object Doobie {
-    val version = "0.9.0"
+    val version = "1.0.0-RC4"
     val `doobie-core` = "org.tpolecat" %% "doobie-core" % version
     val `doobie-postgres` = "org.tpolecat" %% "doobie-postgres" % version
     val `doobie-hikari` = "org.tpolecat" %% "doobie-hikari" % version
@@ -65,19 +66,19 @@ object LibraryDependencies {
   }
 
   object Fs2 {
-    val version = "2.4.4"
+    val version = "3.7.0"
     val `fs2-core` = "co.fs2" %% "fs2-core" % version
     val `fs2-io` = "co.fs2" %% "fs2-io" % version
   }
 
   object Http4s {
-    val version = "0.22.7"
+    val version = "0.23.22"
     val `http4s-core` = "org.http4s" %% "http4s-dsl" % version
     val `http4s-dsl` = "org.http4s" %% "http4s-dsl" % version
     val `http4s-circe` = "org.http4s" %% "http4s-circe" % version
     val `http4s-server` = "org.http4s" %% "http4s-server" % version
-    val `http4s-blaze-server` = "org.http4s" %% "http4s-blaze-server" % version
-    val `http4s-blaze-client` = "org.http4s" %% "http4s-blaze-client" % version
+    val `http4s-ember-server` = "org.http4s" %% "http4s-ember-server" % version
+    val `http4s-ember-client` = "org.http4s" %% "http4s-ember-client" % version
   }
 
   object Jackson {

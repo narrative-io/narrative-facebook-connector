@@ -76,7 +76,7 @@ lazy val `api` = project
       Http4s.`http4s-dsl`,
       Http4s.`http4s-circe`,
       Http4s.`http4s-server`,
-      Http4s.`http4s-blaze-server`,
+      Http4s.`http4s-ember-server`,
       NarrativeBackend.`narrative-common-ssm`,
       NarrativeBackend.`narrative-microframework-config`,
       ScalaTest.`scalatest` % "test"
@@ -128,7 +128,7 @@ lazy val `services` = project
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-kms`,
       Facebook.`facebook-java-business-sdk`,
-      Http4s.`http4s-blaze-client`,
+      Http4s.`http4s-ember-client`,
       Http4s.`http4s-circe`,
       NarrativeBackend.`narrative-common-catsretry`,
       NarrativeBackend.`narrative-microframework-config`,
