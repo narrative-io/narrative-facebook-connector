@@ -1,10 +1,8 @@
 package io.narrative.connectors.facebook.services
 
 import cats.data.NonEmptyList
-import cats.effect.{Blocker, ContextShift, IO, Timer}
-import cats.instances.list._
-import cats.syntax.show._
-import cats.syntax.traverse._
+import cats.effect.IO
+import cats.implicits._
 import com.facebook.ads.{sdk => fb}
 import com.google.gson.{JsonArray, JsonObject, JsonPrimitive}
 import com.typesafe.scalalogging.LazyLogging
@@ -19,11 +17,7 @@ import scala.concurrent.duration._
 import scala.util.control.NoStackTrace
 
 /** A Facebook API wrapper. */
-class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
-    cs: ContextShift[IO],
-    timer: Timer[IO]
-) extends FacebookClient.Ops[IO]
-    with LazyLogging {
+class FacebookClient(app: FacebookApp) extends FacebookClient.Ops[IO] with LazyLogging {
   import FacebookClient._
 
   // Facebook has special support for constructing tokens that allow an app to perform actions by concatenating the
@@ -238,16 +232,14 @@ class FacebookClient(app: FacebookApp, blocker: Blocker)(implicit
 
   private def runIO[A](apiCall: => A): IO[A] =
     retryingOnSomeErrors(retryPolicy, shouldRetry, logError) {
-      blocker.blockOn(
-        IO(apiCall)
-          .timeout(HttpTimeout)
-          .handleErrorWith {
-            // https://developers.facebook.com/docs/graph-api/using-graph-api/error-handling/
-            case e: fb.APIException.FailedRequestException if getErrorCode(e).contains(190) =>
-              IO.raiseError(InvalidAccessToken)
-            case t => IO.raiseError(t)
-          }
-      )
+      IO.blocking(apiCall)
+        .timeout(HttpTimeout)
+        .handleErrorWith {
+          // https://developers.facebook.com/docs/graph-api/using-graph-api/error-handling/
+          case e: fb.APIException.FailedRequestException if getErrorCode(e).contains(190) =>
+            IO.raiseError(InvalidAccessToken)
+          case t => IO.raiseError(t)
+        }
     }
 }
 
@@ -372,10 +364,10 @@ object FacebookClient extends LazyLogging {
     payload
   }
 
-  private def shouldRetry(t: Throwable): Boolean = t match {
+  private def shouldRetry(t: Throwable): IO[Boolean] = t match {
     case failedRequest: fb.APIException.FailedRequestException =>
-      getErrorCode(failedRequest).exists(RetryableErrorCodes.contains)
-    case _ => false
+      getErrorCode(failedRequest).exists(RetryableErrorCodes.contains).pure[IO]
+    case _ => false.pure[IO]
   }
 
   private def logError(t: Throwable, retryDetails: RetryDetails): IO[Unit] =

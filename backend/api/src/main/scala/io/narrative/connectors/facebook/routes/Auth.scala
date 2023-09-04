@@ -2,7 +2,6 @@ package io.narrative.connectors.facebook.routes
 
 import cats.data.{Kleisli, OptionT}
 import cats.effect.IO
-import cats.syntax.applicativeError._
 import com.typesafe.scalalogging.LazyLogging
 import io.narrative.connectors.facebook.services.BearerToken
 import org.http4s.client.UnexpectedStatus

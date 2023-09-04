@@ -1,9 +1,8 @@
 package io.narrative.connectors.facebook.services
 
 import cats.{Eq, Show}
-import cats.effect.{ContextShift, IO}
-import cats.syntax.applicativeError._
-import cats.syntax.show._
+import cats.effect.IO
+import cats.implicits._
 import io.circe.{Decoder, Encoder}
 import io.circe.generic.extras.semiauto.{deriveConfiguredDecoder, deriveConfiguredEncoder}
 import org.http4s.circe.CirceEntityCodec._
@@ -13,7 +12,7 @@ import org.http4s.headers.Authorization
 import io.narrative.connectors.facebook.domain.Profile
 
 /** todo(mbabic) scaladocs */
-class ApiClient(baseUri: Uri, client: Client[IO])(implicit contextShift: ContextShift[IO]) extends ApiClient.Ops[IO] {
+class ApiClient(baseUri: Uri, client: Client[IO]) extends ApiClient.Ops[IO] {
   import ApiClient._
 
   override def company(auth: BearerToken): IO[ApiCompany] = {

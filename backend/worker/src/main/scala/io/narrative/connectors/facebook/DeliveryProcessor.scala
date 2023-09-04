@@ -1,11 +1,11 @@
 package io.narrative.connectors.facebook
 
 import cats.data.OptionT
-import cats.effect.{Blocker, ContextShift, IO}
+import cats.effect.IO
 import cats.syntax.show._
 import com.typesafe.scalalogging.LazyLogging
+import fs2.io.file.Flags
 import io.circe.parser.parse
-
 import io.narrative.connectors.api.connections.ConnectionsApi
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent.{SnapshotAppended, SubscriptionDelivery}
@@ -30,12 +30,11 @@ class DeliveryProcessor(
     encryption: TokenEncryptionService.Ops[IO],
     fb: FacebookClient.Ops[IO],
     profileStore: ProfileStore.Ops[IO],
-    parquetTransformer: ParquetTransformer,
-    blocker: Blocker
+    parquetTransformer: ParquetTransformer
 ) extends DeliveryProcessor.Ops[IO]
     with LazyLogging {
 
-  override def processIfDeliverable(job: Job)(implicit cs: ContextShift[IO]): IO[Unit] = {
+  override def processIfDeliverable(job: Job): IO[Unit] = {
     val deliverIO = for {
       command <- OptionT(commandStore.command(job.eventRevision))
         .getOrRaise(new RuntimeException(s"could not find command with revision ${job.eventRevision.show}"))
@@ -50,7 +49,7 @@ class DeliveryProcessor(
     deliverIO.handleErrorWith(markFailure(job, job.file, _))
   }
 
-  private def processDeliverable(job: Job, deliverable: DeliverableEntry)(implicit cs: ContextShift[IO]): IO[Unit] =
+  private def processDeliverable(job: Job, deliverable: DeliverableEntry): IO[Unit] =
     for {
       settings <- OptionT(settingsStore.settings(deliverable.settingsId))
         .getOrRaise(new RuntimeException(s"could not find settings with id ${deliverable.settingsId.show}"))
@@ -70,8 +69,6 @@ class DeliveryProcessor(
       event: DeliverableEntry,
       settings: Settings,
       token: FacebookToken
-  )(implicit
-      cs: ContextShift[IO]
   ): IO[Unit] = {
     val (fileResource, parseAudience) = event match {
       case _: SubscriptionDeliveryEntry =>
@@ -87,8 +84,9 @@ class DeliveryProcessor(
     }
     fileResource.use { path =>
       fs2.io.file
-        .readAll[IO](path, blocker, 65536)
-        .through(fs2.text.utf8Decode)
+        .Files[IO]
+        .readAll(fs2.io.file.Path.fromNioPath(path), 65536, Flags.Read)
+        .through(fs2.text.utf8.decode)
         .through(fs2.text.lines)
         .map(parse(_).toOption.map(parseAudience))
         .unNone
@@ -132,7 +130,7 @@ object DeliveryProcessor {
 
   trait ReadOps[F[_]] {}
   trait WriteOps[F[_]] {
-    def processIfDeliverable(job: Job)(implicit cs: ContextShift[F]): F[Unit]
+    def processIfDeliverable(job: Job): F[Unit]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]

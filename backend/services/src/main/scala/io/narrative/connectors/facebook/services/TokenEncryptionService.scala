@@ -1,6 +1,6 @@
 package io.narrative.connectors.facebook.services
 
-import cats.effect.{Blocker, ContextShift, IO}
+import cats.effect.IO
 import com.amazonaws.services.kms.AWSKMS
 import com.amazonaws.services.kms.model.{DecryptRequest, EncryptRequest}
 import io.narrative.connectors.facebook.domain.Token
@@ -8,8 +8,7 @@ import io.narrative.connectors.facebook.domain.Token
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
-class TokenEncryptionService(blocker: Blocker, keyId: KmsKeyId, kms: AWSKMS)(implicit contextShift: ContextShift[IO])
-    extends TokenEncryptionService.Ops[IO] {
+class TokenEncryptionService(keyId: KmsKeyId, kms: AWSKMS) extends TokenEncryptionService.Ops[IO] {
   override def decrypt(token: Token.Encrypted): IO[FacebookToken] = {
     val req = new DecryptRequest().withKeyId(keyId.value).withCiphertextBlob(ByteBuffer.wrap(token.value))
     runIO(new String(kms.decrypt(req).getPlaintext.array(), StandardCharsets.UTF_8)).map(FacebookToken.apply)
@@ -22,7 +21,7 @@ class TokenEncryptionService(blocker: Blocker, keyId: KmsKeyId, kms: AWSKMS)(imp
     runIO(kms.encrypt(req).getCiphertextBlob.array()).map(Token.Encrypted.apply)
   }
 
-  private def runIO[A](f: => A): IO[A] = blocker.blockOn(IO(f))
+  private def runIO[A](f: => A): IO[A] = IO.blocking(f)
 }
 
 object TokenEncryptionService {

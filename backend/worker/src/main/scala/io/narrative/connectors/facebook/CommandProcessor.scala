@@ -3,12 +3,11 @@ package io.narrative.connectors.facebook
 import cats.data.EitherT
 import cats.effect.IO
 import cats.implicits._
+import cats.~>
 import com.typesafe.scalalogging.LazyLogging
 import doobie.ConnectionIO
-import doobie.implicits._
 import io.circe.JsonObject
 import io.circe.syntax.EncoderOps
-
 import io.narrative.connectors.api.connections.ConnectionsApi
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
 import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
@@ -34,28 +33,32 @@ class CommandProcessor(
     EitherT.fromEither[IO](jsonObject.asJson.as[Profile.QuickSettings]).rethrowT
   }.sequence
 
-  override def process(event: CommandProcessorEvent): ConnectionIO[CommandProcessor.Result] = {
+  override def process(
+      event: CommandProcessorEvent,
+      toConnectionIO: IO ~> ConnectionIO
+  ): ConnectionIO[CommandProcessor.Result] = {
     for {
       _ <- doobie.free.connection.delay(logger.info(s"processing ${event}"))
       result <- event match {
         case SnapshotAppendedCPEvent(metadata, snapshotAppended) =>
           for {
-            connection <- connectionsApi.connection(snapshotAppended.connectionId).to[ConnectionIO]
-            quickSettings <- extractQuickSettings(connection.quickSettings).to[ConnectionIO]
+            connection <- toConnectionIO(connectionsApi.connection(snapshotAppended.connectionId))
+            quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
 
-            settings <- settingsService
-              .getOrCreate(
-                quickSettings,
-                Settings.Id
-                  .fromConnection(
-                    Profile.Id.apply(connection.profileId),
-                    ConnectionId.apply(snapshotAppended.connectionId)
-                  ),
-                Audience.Name(s"Connection ${ConnectionId.apply(snapshotAppended.connectionId).show} Audience"),
-                Profile.Id.apply(connection.profileId)
-              )
-              .to[ConnectionIO]
-            files <- filesApi.getFiles(event.metadata.revision.value).to[ConnectionIO]
+            settings <- toConnectionIO(
+              settingsService
+                .getOrCreate(
+                  quickSettings,
+                  Settings.Id
+                    .fromConnection(
+                      Profile.Id.apply(connection.profileId),
+                      ConnectionId.apply(snapshotAppended.connectionId)
+                    ),
+                  Audience.Name(s"Connection ${ConnectionId.apply(snapshotAppended.connectionId).show} Audience"),
+                  Profile.Id.apply(connection.profileId)
+                )
+            )
+            files <- toConnectionIO(filesApi.getFiles(event.metadata.revision.value))
             newJobs = files.map { resp =>
               Job(
                 eventRevision = Revision.apply(event.metadata.revision.value),
@@ -78,22 +81,23 @@ class CommandProcessor(
           } yield result
         case SubscriptionDeliveryCPEvent(metadata, subscriptionDelivery) =>
           for {
-            quickSettings <- extractQuickSettings(subscriptionDelivery.quickSettings).to[ConnectionIO]
-            settings <- settingsService
-              .getOrCreate(
-                quickSettings,
-                Settings.Id
-                  .fromSubscription(
-                    Profile.Id.apply(subscriptionDelivery.profileId),
-                    SubscriptionId.apply(subscriptionDelivery.subscriptionId)
+            quickSettings <- toConnectionIO(extractQuickSettings(subscriptionDelivery.quickSettings))
+            settings <- toConnectionIO(
+              settingsService
+                .getOrCreate(
+                  quickSettings,
+                  Settings.Id
+                    .fromSubscription(
+                      Profile.Id.apply(subscriptionDelivery.profileId),
+                      SubscriptionId.apply(subscriptionDelivery.subscriptionId)
+                    ),
+                  Audience.Name(
+                    s"Subscription ${SubscriptionId.apply(subscriptionDelivery.subscriptionId).show} Audience"
                   ),
-                Audience.Name(
-                  s"Subscription ${SubscriptionId.apply(subscriptionDelivery.subscriptionId).show} Audience"
-                ),
-                Profile.Id.apply(subscriptionDelivery.profileId)
-              )
-              .to[ConnectionIO]
-            files <- filesApi.getFiles(metadata.revision.value).to[ConnectionIO]
+                  Profile.Id.apply(subscriptionDelivery.profileId)
+                )
+            )
+            files <- toConnectionIO(filesApi.getFiles(metadata.revision.value))
             newJobs = files.map { resp =>
               Job(
                 eventRevision = Revision.apply(metadata.revision.value),
@@ -137,7 +141,7 @@ object CommandProcessor {
 
   trait ReadOps[F[_]] {}
   trait WriteOps[F[_]] {
-    def process(event: CommandProcessorEvent): F[Result]
+    def process(event: CommandProcessorEvent, toConnectionIO: IO ~> ConnectionIO): F[Result]
   }
 
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]

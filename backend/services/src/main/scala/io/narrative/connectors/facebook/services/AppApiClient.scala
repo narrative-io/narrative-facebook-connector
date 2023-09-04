@@ -2,9 +2,7 @@ package io.narrative.connectors.facebook.services
 
 import cats.{Eq, Show}
 import cats.effect.IO
-import cats.effect.concurrent.Ref
-import cats.syntax.applicativeError._
-import cats.syntax.option._
+import cats.implicits._
 import com.typesafe.scalalogging.LazyLogging
 import fs2.Stream
 import io.circe.{Decoder, Encoder}
@@ -14,6 +12,7 @@ import org.http4s.{AuthScheme, BasicCredentials, Credentials, Method, Request, S
 import org.http4s.client.{Client, UnexpectedStatus}
 import org.http4s.circe.CirceEntityCodec._
 import org.http4s.headers.Authorization
+import cats.effect.Ref
 
 /** todo(mbabic) scaladocs */
 class AppApiClient private (
