@@ -1,6 +1,6 @@
 locals {
   app_port                 = 8080
-  api_image_tag            = "SNAPSHOT-0.1.13"
+  api_image_tag            = "0.1.13"
   api_image_repository     = "narrative-facebook-connector/api"
   domain_name              = "facebook-dev.narrativeconnectors.com"
   name_prefix              = "facebook-connector"
