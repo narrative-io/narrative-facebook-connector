@@ -8,7 +8,7 @@ locals {
   ssm_db_password          = "/${local.stage}/connectors/facebook/api/facebookconnector-db/password"
   ssm_narrative_api_client = "/${local.stage}/connectors/facebook/openapi/client"
   ssm_narrative_api_secret = "/${local.stage}/connectors/facebook/openapi/secret"
-  worker_image_tag         = "0.1.11"
+  worker_image_tag         = "0.1.13"
   worker_image_repository  = "narrative-facebook-connector/worker"
   stage                    = "prod"
 }
