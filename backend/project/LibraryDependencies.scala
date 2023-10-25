@@ -15,7 +15,7 @@ object LibraryDependencies {
   }
 
   object NarrativeConnectorFramework {
-    val version = "0.1.2"
+    val version = "0.2.1"
 
     val `connector-framework-core` =
       "io.narrative" %% "connector-framework-core" % version

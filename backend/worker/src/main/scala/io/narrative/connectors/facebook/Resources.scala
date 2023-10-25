@@ -26,6 +26,7 @@ import io.narrative.connectors.spark.{ParquetTransformer, SparkSessions}
 import io.narrative.microframework.config.Stage
 import org.http4s.ember.client.EmberClientBuilder
 import cats.effect.Temporal
+import org.typelevel.log4cats.LoggerFactory
 
 final case class Resources(
     eventConsumer: EventConsumer.Ops[IO],
@@ -36,8 +37,10 @@ final case class Resources(
     transactor: Transactor[IO]
 )
 object Resources extends LazyLogging {
+
   def apply(config: Config, parallelizationFactor: Int)(implicit
-      timer: Temporal[IO]
+      timer: Temporal[IO],
+      logging: LoggerFactory[IO]
   ): Resource[IO, Resources] =
     for {
       awsCredentials <- Resource.eval(IO.blocking(new DefaultAWSCredentialsProviderChain()))
