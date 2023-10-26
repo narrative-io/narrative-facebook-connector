@@ -156,6 +156,7 @@ lazy val `stores` = project
       Circe.`circe-generic-extras`,
       Circe.`circe-parser`,
       NarrativeConnectorFramework.`connector-framework-core`,
-      ScalaTest.`scalatest` % "test"
+      ScalaTest.`scalatest` % "test",
+      NarrativeBackend.`narrative-common-testcontainers` % "test"
     ) ++ Logging.libraryLoggingDependencies
   )
