@@ -1,6 +1,7 @@
 locals {
   app_port                 = 8080
-  api_image_tag            = "0.1.13"
+  version                  = "0.2.0"
+  api_image_tag            = local.version
   api_image_repository     = "narrative-facebook-connector/api"
   domain_name              = "facebook-dev.narrativeconnectors.com"
   name_prefix              = "facebook-connector"
@@ -8,7 +9,7 @@ locals {
   ssm_db_password          = "/${local.stage}/connectors/facebook/api/facebookconnector-db/password"
   ssm_narrative_api_client = "/${local.stage}/connectors/facebook/openapi/client"
   ssm_narrative_api_secret = "/${local.stage}/connectors/facebook/openapi/secret"
-  worker_image_tag         = "0.1.13"
+  worker_image_tag         = local.version
   worker_image_repository  = "narrative-facebook-connector/worker"
   stage                    = "dev"
 }
@@ -132,8 +133,8 @@ module "load_balancer" {
 }
 
 module "security_group" {
-  source = "../modules/security_group"
-  name   = "${local.name_prefix}-${local.stage}"
-  vpc_id = module.main_vpc_lookup.vpc_id
-  app_port           = local.app_port
+  source   = "../modules/security_group"
+  name     = "${local.name_prefix}-${local.stage}"
+  vpc_id   = module.main_vpc_lookup.vpc_id
+  app_port = local.app_port
 }
