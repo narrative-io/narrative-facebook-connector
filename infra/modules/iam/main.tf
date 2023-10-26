@@ -1,20 +1,25 @@
 resource "aws_iam_role" "_" {
-  name = "${var.name_prefix}-${var.stage}"
+  name               = "${var.name_prefix}-${var.stage}"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
 resource "aws_iam_role_policy" "kms" {
-  name = "${var.name_prefix}-kms-${var.stage}"
-  role = aws_iam_role._.id
+  name   = "${var.name_prefix}-kms-${var.stage}"
+  role   = aws_iam_role._.id
   policy = data.aws_iam_policy_document.kms.json
 }
 
 resource "aws_iam_role_policy" "ssm" {
-  name = "${var.name_prefix}-ssm-${var.stage}"
-  role = aws_iam_role._.id
+  name   = "${var.name_prefix}-ssm-${var.stage}"
+  role   = aws_iam_role._.id
   policy = data.aws_iam_policy_document.ssm.json
 }
 
+resource "aws_iam_role_policy" "cloudwatch" {
+  name   = "${var.name_prefix}-cloudwatch-${var.stage}"
+  role   = aws_iam_role._.id
+  policy = data.aws_iam_policy_document.cloudwatch.json
+}
 
 data "aws_iam_policy_document" "assume_role" {
   statement {
@@ -32,7 +37,7 @@ data "aws_iam_policy_document" "assume_role" {
 
 resource "aws_iam_role_policy_attachment" "base" {
   policy_arn = data.aws_iam_policy.AmazonECSTaskExecutionRolePolicy.arn
-  role = aws_iam_role._.name
+  role       = aws_iam_role._.name
 }
 
 # https://docs.aws.amazon.com/AmazonECS/latest/userguide/task_execution_IAM_role.html
