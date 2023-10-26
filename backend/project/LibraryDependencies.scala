@@ -99,9 +99,9 @@ object LibraryDependencies {
     val `janino` = "org.codehaus.janino" % "janino" % "2.7.8"
     // logstash-logback is the Datadog-recommended library for defining a JSON log formatter.
     // Has runtime deps on logback-access, jackson 2.10+, and slf4j-api.
-    val `logstash-logback` = "net.logstash.logback" % "logstash-logback-encoder" % "6.6"
-    val `logback-classic` = "ch.qos.logback" % "logback-classic" % "1.2.3"
-    val `logback-access` = "ch.qos.logback" % "logback-access" % "1.2.3"
+    val `logstash-logback` = "net.logstash.logback" % "logstash-logback-encoder" % "7.4"
+    val `logback-classic` = "ch.qos.logback" % "logback-classic" % "1.4.11"
+    val `logback-access` = "ch.qos.logback" % "logback-access" % "1.4.11"
     val `scala-logging` = "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
     val `log4j-over-slf4j` = "org.slf4j" % "log4j-over-slf4j" % "1.7.30"
     val `slf4j-api` = "org.slf4j" % "slf4j-api" % "1.7.30"
