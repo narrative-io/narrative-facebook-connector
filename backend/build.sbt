@@ -104,6 +104,7 @@ lazy val `worker` = project
     libraryDependencies ++= Seq(
       Aws.`aws-java-sdk-kms`,
       Aws.`aws-java-sdk-ssm`,
+      Aws.`aws-java-sdk-cloudwatch`,
       Doobie.`doobie-hikari`,
       Http4s.`http4s-core`,
       Http4s.`http4s-dsl`,
@@ -156,6 +157,7 @@ lazy val `stores` = project
       Circe.`circe-generic-extras`,
       Circe.`circe-parser`,
       NarrativeConnectorFramework.`connector-framework-core`,
-      ScalaTest.`scalatest` % "test"
+      ScalaTest.`scalatest` % "test",
+      NarrativeBackend.`narrative-common-testcontainers` % "test"
     ) ++ Logging.libraryLoggingDependencies
   )

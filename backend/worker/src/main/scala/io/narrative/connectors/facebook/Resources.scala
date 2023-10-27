@@ -20,12 +20,14 @@ import io.narrative.connectors.api.files.v2.FilesApiV2
 import io.narrative.connectors.facebook.domain.Job
 import io.narrative.connectors.facebook.services.AppApiClient.{ClientId, ClientSecret}
 import io.narrative.connectors.facebook.services.{FacebookApp, FacebookClient, KmsKeyId, TokenEncryptionService}
-import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore, SettingsStore}
+import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore, QueueMetricsStore, SettingsStore}
 import io.narrative.connectors.queue.QueueStore
 import io.narrative.connectors.spark.{ParquetTransformer, SparkSessions}
 import io.narrative.microframework.config.Stage
 import org.http4s.ember.client.EmberClientBuilder
 import cats.effect.Temporal
+import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
+import org.typelevel.log4cats.LoggerFactory
 
 final case class Resources(
     eventConsumer: EventConsumer.Ops[IO],
@@ -33,15 +35,21 @@ final case class Resources(
     deliveryProcessor: DeliveryProcessor.Ops[IO],
     queueStore: QueueStore.Ops[Job, ConnectionIO],
     parquetTransformer: ParquetTransformer,
-    transactor: Transactor[IO]
+    transactor: Transactor[IO],
+    queueMetricsExporter: QueueMetricsExporter.Ops
 )
 object Resources extends LazyLogging {
+
   def apply(config: Config, parallelizationFactor: Int)(implicit
-      timer: Temporal[IO]
+      timer: Temporal[IO],
+      logging: LoggerFactory[IO]
   ): Resource[IO, Resources] =
     for {
       awsCredentials <- Resource.eval(IO.blocking(new DefaultAWSCredentialsProviderChain()))
       ssm <- SSMResources.ssmClient(logger.underlying, awsCredentials)
+      cloudwatchClient <- Resource.eval(
+        IO.blocking(AmazonCloudWatchClient.builder().withCredentials(awsCredentials).build())
+      )
       xa <- transactor(ssm, config.database, parallelizationFactor)
       api <- baseAppApiClient(config, ssm)
       encryption <- encryptionService(awsCredentials, config, ssm)
@@ -76,14 +84,16 @@ object Resources extends LazyLogging {
         parquetTransformer
       )
       eventConsumer = new EventConsumer(eventsApi, revisionStore, xa)
-
+      queueStatisticsStore = new QueueMetricsStore()
+      queueMetricsExporter = new QueueMetricsExporter(cloudwatchClient, queueStatisticsStore, xa, config.stage)
     } yield Resources(
       eventConsumer = eventConsumer,
       eventProcessor = commandProcessor,
       deliveryProcessor = deliveryProcessor,
       queueStore = jobStore,
       parquetTransformer = parquetTransformer,
-      transactor = xa
+      transactor = xa,
+      queueMetricsExporter
     )
 
   def baseAppApiClient(config: Config, ssm: AWSSimpleSystemsManagement): Resource[IO, BaseAppApiClient.Ops[IO]] =
