@@ -3,7 +3,7 @@
 Audience of this document:
 
 | Role             | Objective                             |
-|------------------|---------------------------------------|
+| ---------------- | ------------------------------------- |
 | On-call Operator | Understand and react to a failure     |
 | Developer        | Roll out a new version of the service |
 
@@ -11,18 +11,18 @@ Audience of this document:
 
 <!-- TOC -->
 
-* [Operations](#operations)
-    * [Deployment](#deployment)
-    * [Monitoring and Alerts](#monitoring-and-alerts)
-    * [Logs](#logs)
-    * [Related Processes](#related-processes)
-        * [Facebook App Management](#facebook-app-management)
-        * [Facebook App Review](#facebook-app-review)
-    * [Troubleshooting/Failure Handling](#troubleshootingfailure-handling)
-        * [Facebook Token Expiration](#facebook-token-expiration)
-        * [Taking a Thread Dump](#taking-a-thread-dump)
-        * [Retrying a Delivery](#retrying-a-delivery)
-    * [Known Issues](#known-issues)
+- [Operations](#operations)
+  - [Deployment](#deployment)
+  - [Monitoring and Alerts](#monitoring-and-alerts)
+  - [Logs](#logs)
+  - [Related Processes](#related-processes)
+    - [Facebook App Management](#facebook-app-management)
+    - [Facebook App Review](#facebook-app-review)
+  - [Troubleshooting/Failure Handling](#troubleshootingfailure-handling)
+    - [Facebook Token Expiration](#facebook-token-expiration)
+    - [Taking a Thread Dump](#taking-a-thread-dump)
+    - [Retrying a Delivery](#retrying-a-delivery)
+  - [Known Issues](#known-issues)
 
 <!-- TOC -->
 
@@ -45,6 +45,10 @@ Metrics like CPU and memory utilization can be viewed on the ECS service dashboa
 
 - [API service dashboard](https://us-east-1.console.aws.amazon.com/ecs/v2/clusters/facebook-connector-api-prod/services/facebook-connector-api-service-prod/health?region=us-east-1)
 - [Worker service dashboard](https://us-east-1.console.aws.amazon.com/ecs/v2/clusters/facebook-connector-worker-prod/services/facebook-connector-worker-service-prod/health?region=us-east-1)
+
+Additionally, the service regularly pushes queue metrics to CloudWatch. There is a [Datadog dashboard](https://app.datadoghq.com/dashboard/h8x-qvp-nij/facebook-connector) for all both dev and prod, as well as monitors to alert when the queue gets out of control:
+- [prod](https://app.datadoghq.com/monitors/133797508)
+- [dev](https://app.datadoghq.com/monitors/133796428)
 
 ## Logs
 
