@@ -6,15 +6,15 @@ const tbPackageJson = fs.readFileSync('./node_modules/@narrative.io/tackle-box/p
 const appVersion = JSON.parse(packageJson).version || 0
 const tbVersion = JSON.parse(tbPackageJson).version || 0
 
-const {gitDescribe, gitDescribeSync} = require('git-describe');
+const {gitDescribeSync} = require('git-describe');
 
 module.exports = {
-  transpileDependencies: [
+	"transpileDependencies": [
     "vuetify"
   ],
   lintOnSave: false,
   configureWebpack: {
-    plugins: [
+		plugins: [
       new webpack.DefinePlugin({
         'process.env': {
           APP_VERSION: '"' + appVersion + '"',
@@ -29,9 +29,5 @@ module.exports = {
     output: {
       globalObject: "this"
     }
-  },
-  devServer: {
-    port: 9999
-  }
-}
-
+	}
+};

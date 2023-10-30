@@ -1,4 +1,4 @@
-const baseUrl = window.location.host === 'facebook-connector.narrative.tools' ?
+const baseUrl = window.location.host === 'facebook-connector.narrative.io' ?
   'https://facebook.narrativeconnectors.com' :
   'https://facebook-dev.narrativeconnectors.com'
 // const baseUrl = "https://localhost:9002"
