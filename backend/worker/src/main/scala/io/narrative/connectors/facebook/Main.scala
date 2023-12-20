@@ -1,7 +1,7 @@
 package io.narrative.connectors.facebook
 
 import cats.effect.{Clock, IO, IOApp, Resource}
-import cats.implicits.catsSyntaxTuple2Parallel
+import cats.implicits._
 import com.typesafe.scalalogging.LazyLogging
 import doobie.{ConnectionIO, WeakAsync}
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
@@ -24,8 +24,6 @@ object Main extends IOApp.Simple with LazyLogging {
     worker.use(_ => IO.never).void
   }
 
-  // Kick off command consumption and multiple job processors in parallel.
-  // See https://typelevel.org/cats-effect/docs/2.x/datatypes/io#parallelism
   private def run(resources: Resources): IO[Unit] = WeakAsync.liftK[IO, ConnectionIO].use { toConnectionIO =>
     val computeAndExportMetrics = for {
       _ <- logging.getLogger.info("Exporting queue metrics to Cloudwatch...")
@@ -33,6 +31,8 @@ object Main extends IOApp.Simple with LazyLogging {
       _ <- resources.queueMetricsExporter.computeAndExport(now)
     } yield ()
 
+    // Kick off command consumption and multiple job processors in parallel.
+    // See https://typelevel.org/cats-effect/docs/2.x/datatypes/io#parallelism
     (
       resources.eventConsumer.consume(
         event =>
@@ -42,7 +42,9 @@ object Main extends IOApp.Simple with LazyLogging {
                 .process(SubscriptionDeliveryCPEvent(event.metadata, sd), toConnectionIO)
                 .map(_ => ())
             case sa: DeliveryEvent.SnapshotAppended =>
-              resources.eventProcessor.process(SnapshotAppendedCPEvent(event.metadata, sa), toConnectionIO).map(_ => ())
+              resources.eventProcessor
+                .process(SnapshotAppendedCPEvent(event.metadata, sa), toConnectionIO)
+                .map(_ => ())
             case DeliveryEvent.ConnectionCreated(connectionId) =>
               loggingConnectionIO.getLogger.info(s"Connection-created event [$connectionId] ignored")
           },

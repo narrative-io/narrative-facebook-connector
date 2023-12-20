@@ -18,6 +18,7 @@ import scala.util.control.NoStackTrace
 
 /** A Facebook API wrapper. */
 class FacebookClient(app: FacebookApp) extends FacebookClient.Ops[IO] with LazyLogging {
+
   import FacebookClient._
 
   // Facebook has special support for constructing tokens that allow an app to perform actions by concatenating the
@@ -341,7 +342,11 @@ object FacebookClient extends LazyLogging {
       .flatMap(_.asScala.get("custom_audience_tos").map(_ == 1L))
       .getOrElse(false)
 
-  private def mkContext(accessToken: FacebookToken): fb.APIContext = new fb.APIContext(accessToken.value)
+  private def mkContext(accessToken: FacebookToken): fb.APIContext = new fb.APIContext(
+    accessToken.value,
+    null, // app secret
+    "narrative-audience-uploader" // app id, must be set in order to initialize Facebook CrashReporter
+  )
 
   // The below isn't exactly pretty but is mimicking the official example:
   // https://github.com/facebook/facebook-java-business-sdk/blob/71ff19da9131cadcddecb55d5f194d0b7f12b480/examples/src/main/java/com/facebook/ads/sdk/samples/CustomAudienceExample.java
