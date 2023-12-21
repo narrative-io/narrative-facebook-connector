@@ -38,7 +38,7 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
 
     val payload = FacebookClient.mkAddToAudiencePayload(batch)
 
-    parser.parse(payload.toString).getOrElse(throw new IllegalStateException("Expected right value")) shouldEqual
+    parser.parse(payload.toString).right.get shouldEqual
       json"""
       {
         "schema": [
@@ -81,5 +81,64 @@ class FacebookClientSpec extends AnyFunSuite with EitherValues with Matchers {
         ]
       }
       """
+  }
+
+  // https://app.shortcut.com/narrativeio/story/28940
+  test("[sc-28940] should only set fields that are present in at least one member in a batch") {
+    val batch = List(
+      FacebookAudienceMember(
+        email = "d64ac45af268c53ea74ad3ef3dbc7102cd0aa9b63cb59456122be981d3bf2ade".some,
+        // sha256("alice")
+        firstName = "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90".some,
+        // sha256("bowers")
+        lastName = "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c".some
+      ),
+      FacebookAudienceMember(
+        // sha256("us")
+        country = "79adb2a2fce5c6ba215fe5f27f532d4e7edbac4b6a5e09e1ef3a08084a904621".some,
+        email = "0c7e6a405862e402eb76a70f8a26fc732d07c32931e9fae9ab1582911d2e8a3b".some
+      ),
+      FacebookAudienceMember(
+        maid = "966a15b1-6505-4cb7-ba30-3342c5019112".some
+      )
+    )
+
+    val payload = FacebookClient.mkAddToAudiencePayload(batch)
+
+    parser.parse(payload.toString).right.get shouldEqual
+      json"""
+    {
+      "schema": [
+        "COUNTRY",
+        "EMAIL",
+        "FN",
+        "LN",
+        "MADID"
+      ],
+      "data": [
+        [
+          "",
+          "d64ac45af268c53ea74ad3ef3dbc7102cd0aa9b63cb59456122be981d3bf2ade",
+          "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90",
+          "c9561ea9ac17200ef167c850f3268f346f737ad0d3c48ed3996a9ca73689803c",
+          ""
+        ],
+        [
+          "79adb2a2fce5c6ba215fe5f27f532d4e7edbac4b6a5e09e1ef3a08084a904621",
+          "0c7e6a405862e402eb76a70f8a26fc732d07c32931e9fae9ab1582911d2e8a3b",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "966a15b1-6505-4cb7-ba30-3342c5019112"
+        ]
+      ]
+    }
+    """
   }
 }

@@ -353,12 +353,15 @@ object FacebookClient extends LazyLogging {
   // Exposed for testing.
   private[services] def mkAddToAudiencePayload(batch: List[FacebookAudienceMember]): JsonObject = {
     val schema = new JsonArray()
-    FacebookAudienceMember.header.foreach(col => schema.add(new JsonPrimitive(col)))
+    val fields = FacebookAudienceMember.nonEmptyFields(batch).toList.sorted
+    fields
+      .map(FacebookAudienceMember.headerValue)
+      .foreach(header => schema.add(new JsonPrimitive(header)))
 
     val data = new JsonArray()
     batch.foreach { member =>
       val row = new JsonArray()
-      member.values.foreach(value => row.add(new JsonPrimitive(value)))
+      FacebookAudienceMember.fieldValues(member, fields).foreach(value => row.add(new JsonPrimitive(value)))
       data.add(row)
     }
 
