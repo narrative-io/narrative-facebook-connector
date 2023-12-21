@@ -43,7 +43,7 @@ jobs:
             for ((i=0; $i < $COUNT; i++)); do
 
               # Get name of artifact and count instances of this name.
-              name=$(jq <<<$JSON -r ".artifacts[$i].name?")
+              name=$(jq <<<$JSON -r ".artifacts[$i].name?" | sed 's/[^a-zA-Z0-9]/_/g')
               ARTCOUNT[$name]=$(( $(( ${ARTCOUNT[$name]} )) + 1))
 
               id=$(jq <<<$JSON -r ".artifacts[$i].id?")
