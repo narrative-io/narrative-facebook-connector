@@ -69,7 +69,7 @@ jobs:
           fetch-depth: 0
       - name: backend changeset
         id: backend
-        uses: tj-actions/changed-files@v11.5
+        uses: tj-actions/changed-files@v41
         with:
           files: |
             ^backend/**
