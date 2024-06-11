@@ -9,6 +9,9 @@ export default {
   name: 'App',
   mounted() {
     this.nioInitializeApplication(this)
+    let facebookScriptElement = document.createElement("script")
+    facebookScriptElement.setAttribute("src", "https://connect.facebook.net/en_US/all.js")
+    document.head.appendChild(facebookScriptElement)
   }
 }
 </script>

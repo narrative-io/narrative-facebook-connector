@@ -81,6 +81,7 @@
   VFacebookLogin.d-none(
     :app-id="appId"
     @sdk-init="facebookSdkInit"
+    :version="'v20.0'"
   )
 </template>
 
@@ -94,7 +95,7 @@ import NewProfile from './new-profile/NewProfile'
 import ProfileList from './list-profiles/ProfileList'
 import VFacebookLogin from 'vue-facebook-login-component'
 import { makeRandomId } from '@narrative.io/tackle-box/src/modules/helpers'
-import { NioOpenApiModule } from '@narrative.io/tackle-box'
+import { faBrackets, NioOpenApiModule } from '@narrative.io/tackle-box'
 import { baseUrl, setHeaders, getHeaders } from '@/utils/serviceLayer'
 
 export default {

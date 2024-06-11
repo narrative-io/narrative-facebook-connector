@@ -29,6 +29,7 @@
         :login-options="facebookLoginOptions"
         v-model="facebookModel"
         @sdk-init="facebookSdkInit"
+        :version="facebookApiVersion"
       )
         template(v-slot:login)
           span Login With Facebook
@@ -68,6 +69,7 @@ export default {
     appId: "554425321962851",
     // Facebook SDK, initialzed via callback.
     facebook: null,
+    facebookApiVersion: "v19.0",
     facebookLoginOptions: {
       // Request permissions required by the Facebook Connector in order to
       // manage the user's ad accounts.
@@ -86,7 +88,7 @@ export default {
     // Connected account information
     model: null,
     showInvalidTokenWarning: false,
-    showPermissionsDialog: false
+    showPermissionsDialog: false,
   }),
   methods: {
     // NB: not a computed property as we rely on being able to read an up to date value outside the template.
@@ -137,6 +139,8 @@ export default {
     if (this.account) {
       this.model = this.account
     }
+
+    FB.init({ appId: this.appId, version: this.version, ...this.facebookLoginOptions })
   }
 };
 </script>
