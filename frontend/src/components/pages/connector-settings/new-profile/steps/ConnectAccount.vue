@@ -17,21 +17,13 @@
       .filter-title.nio-h4.text-primary-darker Connect Facebook Account
       .description.nio-p.text-primary-dark
         span
-          | Log in to to authorize the conntor to seamlessly deliver your data purchases straight to a Facebook a custom
+          | Log in to to authorize the connector to seamlessly deliver your data purchases straight to a Facebook custom
           | audience in one of your ad accounts.#{' '}
         p
           a.text-decoration-underline(@click="showPermissionsDialog = true") Learn more
           span #{' '}about the permissions required by the app.
     .filter-value.facebook-login-button.fill-width
-      VFacebookLogin(
-        :app-id="appId"
-        @login="onFacebookLogin"
-        :login-options="facebookLoginOptions"
-        v-model="facebookModel"
-        @sdk-init="facebookSdkInit"
-      )
-        template(v-slot:login)
-          span Login With Facebook
+      button(@click="logInWithFacebook") Login with Facebook
   .filter(v-if="modelValid(model)")
     .title-description
       .filter-title.nio-h4.text-primary-darker User
@@ -56,64 +48,95 @@
 import { baseUrl, getHeaders } from '@/utils/serviceLayer'
 import axios from 'axios'
 import PermissionsDialog from "./PermissionsDialog"
-import VFacebookLogin from 'vue-facebook-login-component'
 
 export default {
-  components: { PermissionsDialog, VFacebookLogin },
+  components: { PermissionsDialog },
   props: {
     account: { type: Object, required: false }
   },
   data: () => ({
-    // Narrative Audience Uploader Facebook app ID. Not a secret.
     appId: "554425321962851",
-    // Facebook SDK, initialzed via callback.
     facebook: null,
     facebookLoginOptions: {
-      // Request permissions required by the Facebook Connector in order to
-      // manage the user's ad accounts.
       scope: "ads_management,business_management",
-      // Populate scopes the user accepted in the Facebook auth response.
       return_scopes: true
     },
-    // Model populated on login by Facebook SDK
     facebookModel: null,
-    // The underlying scope component object
     facebookScope: null,
-    // The last access token returned by the Facebook login SDK.
-    // Used to debounce onFacebookLogin calls.
     mostRecentAccessToken: null,
     loading: false,
-    // Connected account information
     model: null,
     showInvalidTokenWarning: false,
     showPermissionsDialog: false
   }),
+  mounted() {
+    if (this.account) {
+      this.model = this.account
+    }
+    this.init()
+  },
   methods: {
-    // NB: not a computed property as we rely on being able to read an up to date value outside the template.
-    modelValid(model) {
-      return model &&
-        model.token.is_valid &&
-        this.missingScopes(this.model.token.scopes).length === 0
+    async init() {
+      await this.loadFacebookSDK(document, "script", "facebook-jssdk");
     },
-    facebookSdkInit({ FB, scope }) {
-      this.facebook = FB
-      this.facebookScope = scope
+    async logInWithFacebook() {
+      if (!window.FB) {
+        await this.loadFacebookSDK(document, "script", "facebook-jssdk");
+      }
+      
+      window.FB.init({
+        appId: this.appId,
+        version: "v20.0"
+      });
+
+      window.FB.Event.subscribe('auth.login', function(response) {
+        console.log("auth.login", response)
+      });
+      window.FB.Event.subscribe('xfbml.render', function() {
+        console.log("xfbml.render")
+      });
+      window.FB.Event.subscribe('auth.authResponseChange', function(response) {
+        console.log("auth.authResponseChange", response)
+      });
+      window.FB.Event.subscribe('auth.statusChange', function(response) {
+        console.log("auth.statusChange", response)
+      });
+
+      // wait for 1 sec
+      await new Promise(resolve => setTimeout(resolve, 1000))
+
+      console.log("logging in")
+      console.log("window.FB.login ", window.FB.login)
+      window.FB.login(response => {
+        console.log("response", response)
+        if (response.authResponse) {
+          this.onFacebookLogin(response.authResponse);
+        } else {
+          alert("User cancelled login or did not fully authorize.");
+        }
+      }, this.facebookLoginOptions);
     },
-    missingScopes(scopes) {
-      return [
-        'ads_management',
-        'business_management'
-      ].filter(scope => !scopes.includes(scope))
+    async loadFacebookSDK(d, s, id) {
+      return new Promise((resolve, reject) => {
+        let js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {
+          return resolve();
+        }
+        js = d.createElement(s);
+        js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        js.onload = resolve;
+        js.onerror = reject;
+        fjs.parentNode.insertBefore(js, fjs);
+      });
     },
-    onFacebookLogin() {
-      const authResponse = this.facebook.getAuthResponse()
-      // Only recheck token validity if it's changed since the last time we checked.
+    onFacebookLogin(authResponse) {
+      console.log("authResponse", authResponse)
       if (authResponse && authResponse.accessToken != this.mostRecentAccessToken) {
         this.mostRecentAccessToken = authResponse.accessToken
         this.loading = true
         axios.post(`${baseUrl}/tokens/metadata`, { "token": authResponse.accessToken }, getHeaders())
           .then(resp => {
-            // Embed access token value inside the model.token.value for convenience
             this.model = {
               ...resp.data,
               token: {
@@ -124,17 +147,33 @@ export default {
             this.loading = false
             this.showInvalidTokenWarning = !this.modelValid(this.model)
             this.$emit('stepPayloadChanged', this.model)
+          }, err => {
+            console.error("token err", err)
+            this.loading = false
           })
-        }
+      }
+    },
+    modelValid(model) {
+      return model &&
+        model.token.is_valid &&
+        this.missingScopes(this.model.token.scopes).length === 0
+    },
+    missingScopes(scopes) {
+      return [
+        'ads_management',
+        'business_management'
+      ].filter(scope => !scopes.includes(scope))
     }
   },
   watch: {
+    model: {
+      handler: function (model) {
+        console.log("model changed", model)
+      },
+      deep: true
+    },
     account() {
-      this.model = this.account
-    }
-  },
-  mounted() {
-    if (this.account) {
+      console.log("account changed", this.account)
       this.model = this.account
     }
   }

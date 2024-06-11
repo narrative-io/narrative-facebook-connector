@@ -78,10 +78,10 @@
       @close="errorDialog = false"
     )
   //- Instantiate invisble login button so that the user can be logged out if they choose to disconnect their account.
-  VFacebookLogin.d-none(
-    :app-id="appId"
-    @sdk-init="facebookSdkInit"
-  )
+  //- VFacebookLogin.d-none(
+  //-   :app-id="appId"
+  //-   @sdk-init="facebookSdkInit"
+  //- )
 </template>
 
 <script>
@@ -92,7 +92,7 @@ import ConfirmDisconnectDialog from './ConfirmDisconnectDialog'
 import ErrorDialog from './ErrorDialog'
 import NewProfile from './new-profile/NewProfile'
 import ProfileList from './list-profiles/ProfileList'
-import VFacebookLogin from 'vue-facebook-login-component'
+// import VFacebookLogin from 'vue-facebook-login-component'
 import { makeRandomId } from '@narrative.io/tackle-box/src/modules/helpers'
 import { NioOpenApiModule } from '@narrative.io/tackle-box'
 import { baseUrl, setHeaders, getHeaders } from '@/utils/serviceLayer'
@@ -104,7 +104,7 @@ export default {
     ErrorDialog,
     NewProfile,
     ProfileList,
-    VFacebookLogin
+    // VFacebookLogin
   },
   data: () => ({
     activeTab: 0,
