@@ -41,11 +41,11 @@ class QueueMetricsStoreSpec extends AnyFunSuite with Matchers with OptionValues 
       _ <- sql"alter table commands disable trigger all".update.run.transact(r.xa)
       _ <- new CommandStore().upsert(subscriptionDeliveryCommandRow(0)).transact(r.xa)
       _ <- files0.files.keys.toList.traverse { file =>
-        queueStore.enqueue(Job(Revision(0), file)).transact(r.xa)
+        queueStore.enqueue(Job(Revision(0), file, None)).transact(r.xa)
       }
       _ <- new CommandStore().upsert(subscriptionDeliveryCommandRow(1)).transact(r.xa)
       _ <- files1.files.keys.toList.traverse { file =>
-        queueStore.enqueue(Job(Revision(1), file)).transact(r.xa)
+        queueStore.enqueue(Job(Revision(1), file, None)).transact(r.xa)
       }
       queueSize <- queueStatisticsStore.queueSize().transact(r.xa)
 
@@ -79,11 +79,11 @@ class QueueMetricsStoreSpec extends AnyFunSuite with Matchers with OptionValues 
       _ <- sql"alter table commands disable trigger all".update.run.transact(r.xa)
       _ <- new CommandStore().upsert(subscriptionDeliveryCommandRow(0, subscriptionId0)).transact(r.xa)
       _ <- files0.files.keys.toList.traverse { file =>
-        queueStore.enqueue(Job(Revision(0), file)).transact(r.xa)
+        queueStore.enqueue(Job(Revision(0), file, None)).transact(r.xa)
       }
       _ <- new CommandStore().upsert(subscriptionDeliveryCommandRow(1, subscriptionId1)).transact(r.xa)
       _ <- files1.files.keys.toList.traverse { file =>
-        queueStore.enqueue(Job(Revision(1), file)).transact(r.xa)
+        queueStore.enqueue(Job(Revision(1), file, None)).transact(r.xa)
       }
       queueSizePerSubscriptionId <- queueStatisticsStore.legacyDeliveryQueueSizePerSubscription().transact(r.xa)
 
@@ -119,11 +119,11 @@ class QueueMetricsStoreSpec extends AnyFunSuite with Matchers with OptionValues 
       _ <- sql"""delete from queue""".update.run.transact(r.xa)
       _ <- new CommandStore().upsert(datasetDeliveryCommandRow(0, connectionId0)).transact(r.xa)
       _ <- files0.files.keys.toList.traverse { file =>
-        queueStore.enqueue(Job(Revision(0), file)).transact(r.xa)
+        queueStore.enqueue(Job(Revision(0), file, None)).transact(r.xa)
       }
       _ <- new CommandStore().upsert(datasetDeliveryCommandRow(1, connectionId1)).transact(r.xa)
       _ <- files1.files.keys.toList.traverse { file =>
-        queueStore.enqueue(Job(Revision(1), file)).transact(r.xa)
+        queueStore.enqueue(Job(Revision(1), file, None)).transact(r.xa)
       }
       queueSizePerSubscriptionId <- queueStatisticsStore.deliveryQueueSizePerConnection().transact(r.xa)
 
