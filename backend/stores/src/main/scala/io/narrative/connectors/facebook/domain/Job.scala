@@ -4,10 +4,12 @@ import cats.{Eq, Show}
 import doobie.Meta
 import io.circe.{Codec, Decoder, Encoder}
 import io.circe.generic.extras.semiauto.deriveConfiguredCodec
+import io.narrative.connectors.model.SnapshotId
 
 final case class Job(
     eventRevision: Revision,
-    file: FileName
+    file: FileName,
+    snapshotId: Option[SnapshotId]
 )
 
 object Job {

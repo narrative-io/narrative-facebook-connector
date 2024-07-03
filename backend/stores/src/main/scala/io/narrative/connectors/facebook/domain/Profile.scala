@@ -32,7 +32,8 @@ object Profile {
 
   final case class QuickSettings(
       audienceId: Option[Audience.Id],
-      audienceName: Option[Audience.Name]
+      audienceName: Option[Audience.Name],
+      historicalDataEnabled: Option[Boolean]
   )
   object QuickSettings {
     import io.narrative.connectors.facebook.codecs.CirceConfig._
