@@ -8,7 +8,11 @@ import fs2.io.file.Flags
 import io.circe.parser.parse
 import io.narrative.connectors.api.connections.ConnectionsApi
 import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
-import io.narrative.connectors.api.events.EventsApi.DeliveryEvent.{SnapshotAppended, SubscriptionDelivery}
+import io.narrative.connectors.api.events.EventsApi.DeliveryEvent.{
+  SnapshotAppended,
+  SubscriptionDelivery,
+  ConnectionCreated
+}
 import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
 import io.narrative.connectors.facebook.DeliveryProcessor.{
   DeliverableEntry,
@@ -21,7 +25,9 @@ import io.narrative.connectors.facebook.services.{FacebookClient, FacebookToken,
 import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate.FileUpdate
 import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore, SettingsStore}
 import io.narrative.connectors.spark.ParquetTransformer
+import io.narrative.connectors.facebook.DeliveryProcessor.ConnectionCreatedEntry
 
+// TODO: handle connection creation events?
 class DeliveryProcessor(
     fileApi: BackwardsCompatibleFilesApi.Ops[IO],
     connectionsApi: ConnectionsApi.Ops[IO],
@@ -39,10 +45,12 @@ class DeliveryProcessor(
       command <- OptionT(commandStore.command(job.eventRevision))
         .getOrRaise(new RuntimeException(s"could not find command with revision ${job.eventRevision.show}"))
       _ <- command.payload.payload match {
-        case sd: SubscriptionDelivery => processDeliverable(job, SubscriptionDeliveryEntry(sd, command.settingsId))
-        case sa: SnapshotAppended     => processDeliverable(job, SnapshotAppendedEntry(sa, command.settingsId))
-        case DeliveryEvent.ConnectionCreated(connectionId) =>
-          IO(logger.info(s"Connection-created event [$connectionId] ignored"))
+        case sd: SubscriptionDelivery =>
+          processDeliverable(job, SubscriptionDeliveryEntry(sd, command.settingsId))
+        case sa: SnapshotAppended =>
+          processDeliverable(job, SnapshotAppendedEntry(sa, command.settingsId))
+        case cc: DeliveryEvent.ConnectionCreated =>
+          processDeliverable(job, ConnectionCreatedEntry(cc, command.settingsId))
       }
     } yield ()
 
@@ -56,6 +64,7 @@ class DeliveryProcessor(
       profileId <- (deliverable match {
         case SubscriptionDeliveryEntry(e, _) => IO(e.profileId)
         case SnapshotAppendedEntry(e, _)     => connectionsApi.connection(e.connectionId).map(_.profileId)
+        case ConnectionCreatedEntry(c, _)    => connectionsApi.connection(c.connectionId).map(_.profileId)
       }).map(Profile.Id.apply)
       profile <- profile_!(profileId)
       token <- encryption.decrypt(profile.token.encrypted)
@@ -77,6 +86,11 @@ class DeliveryProcessor(
           AudienceParser.parseLegacy _
         )
       case _: SnapshotAppendedEntry =>
+        (
+          fileApi.downloadFile(eventRevision.value, job.file.value).flatMap(parquetTransformer.toJson),
+          AudienceParser.parseDataset _
+        )
+      case _: ConnectionCreatedEntry =>
         (
           fileApi.downloadFile(eventRevision.value, job.file.value).flatMap(parquetTransformer.toJson),
           AudienceParser.parseDataset _
@@ -118,6 +132,10 @@ object DeliveryProcessor {
     def settingsId: Settings.Id
   }
 
+  case class ConnectionCreatedEntry(
+      connectionCreated: ConnectionCreated,
+      settingsId: Settings.Id
+  ) extends DeliverableEntry
   case class SnapshotAppendedEntry(
       snapshotAppended: SnapshotAppended,
       settingsId: Settings.Id
