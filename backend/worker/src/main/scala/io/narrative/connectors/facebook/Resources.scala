@@ -43,7 +43,8 @@ object Resources extends LazyLogging {
 
   def apply(config: Config, parallelizationFactor: Int)(implicit
       timer: Temporal[IO],
-      logging: LoggerFactory[IO]
+      logging: LoggerFactory[IO],
+      loggingConnectionIO: LoggerFactory[ConnectionIO]
   ): Resource[IO, Resources] =
     for {
       awsCredentials <- Resource.eval(IO.blocking(new DefaultAWSCredentialsProviderChain()))

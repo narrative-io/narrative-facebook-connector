@@ -3,7 +3,6 @@ package io.narrative.connectors.facebook
 import cats.data.OptionT
 import cats.effect.IO
 import cats.syntax.show._
-import com.typesafe.scalalogging.LazyLogging
 import fs2.io.file.Flags
 import io.circe.parser.parse
 import io.narrative.connectors.api.connections.ConnectionsApi
@@ -26,6 +25,7 @@ import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate.FileUpd
 import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore, SettingsStore}
 import io.narrative.connectors.spark.ParquetTransformer
 import io.narrative.connectors.facebook.DeliveryProcessor.ConnectionCreatedEntry
+import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 
 // TODO: handle connection creation events?
 class DeliveryProcessor(
@@ -37,8 +37,10 @@ class DeliveryProcessor(
     fb: FacebookClient.Ops[IO],
     profileStore: ProfileStore.Ops[IO],
     parquetTransformer: ParquetTransformer
-) extends DeliveryProcessor.Ops[IO]
-    with LazyLogging {
+)(implicit loggerFactory: LoggerFactory[IO])
+    extends DeliveryProcessor.Ops[IO] {
+
+  private val logger: SelfAwareStructuredLogger[IO] = loggerFactory.getLogger
 
   override def processIfDeliverable(job: Job): IO[Unit] = {
     val deliverIO = for {
@@ -116,13 +118,13 @@ class DeliveryProcessor(
       .getOrRaise(new RuntimeException(s"profile ${profileId.show} does not exist."))
 
   private def markDelivered(job: Job, fileName: FileName): IO[Unit] = for {
-    _ <- IO(logger.info(s"delivery success. $job"))
+    _ <- logger.info(s"delivery success. $job")
     _ <- commandStore.updateStatus(job.eventRevision, FileUpdate(fileName, FileStatus.Delivered))
   } yield ()
 
   private def markFailure(job: Job, fileName: FileName, err: Throwable): IO[Unit] =
     for {
-      _ <- IO(logger.error(s"delivery failed. $job", err))
+      _ <- logger.error(err)(s"delivery failed. $job")
       _ <- commandStore.updateStatus(job.eventRevision, FileUpdate(fileName, FileStatus.Failed))
     } yield ()
 }

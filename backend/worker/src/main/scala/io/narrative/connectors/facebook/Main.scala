@@ -13,6 +13,8 @@ import io.narrative.connectors.facebook.CommandProcessor.ConnectionCreatedCPEven
 
 object Main extends IOApp.Simple with LazyLogging {
   private implicit val logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
+  private implicit val loggerFactoryConnectionIO: LoggerFactory[ConnectionIO] = Slf4jFactory.create[ConnectionIO]
+
   val parallelizationFactor = 1
   override def run: IO[Unit] = {
     val worker = for {

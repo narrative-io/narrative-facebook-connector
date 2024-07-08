@@ -4,7 +4,6 @@ import cats.data.EitherT
 import cats.effect.IO
 import cats.implicits._
 import cats.~>
-import com.typesafe.scalalogging.LazyLogging
 import doobie.ConnectionIO
 import io.circe.JsonObject
 import io.circe.syntax.EncoderOps
@@ -17,6 +16,7 @@ import io.narrative.connectors.queue.QueueStore
 import io.narrative.connectors.api.datasets.DatasetFilesAPI
 import io.narrative.connectors.model.SnapshotId
 import io.narrative.connectors.facebook.domain.Profile.QuickSettings
+import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 
 /** Resolves commands saved by the [[CommandConsumer]]. Outputs a resolved, stored command and jobs for processing each
   * file in the delivery command.
@@ -28,8 +28,9 @@ class CommandProcessor(
     connectionsApi: ConnectionsApi.Ops[IO],
     filesApi: BackwardsCompatibleFilesApi.Ops[IO],
     datasetFilesApi: DatasetFilesAPI.Ops[IO]
-) extends CommandProcessor.Ops[ConnectionIO]
-    with LazyLogging {
+)(implicit loggerFactory: LoggerFactory[ConnectionIO])
+    extends CommandProcessor.Ops[ConnectionIO] {
+  private val logger: SelfAwareStructuredLogger[ConnectionIO] = loggerFactory.getLogger
 
   import CommandProcessor._
 
@@ -38,7 +39,7 @@ class CommandProcessor(
       toConnectionIO: IO ~> ConnectionIO
   ): ConnectionIO[CommandProcessor.Result] =
     for {
-      _ <- logInfo(s"processing ${event}")
+      _ <- logger.info(s"processing ${event}")
       result <- event match {
         case event: ConnectionCreatedCPEvent    => processConnectionCreated(event, toConnectionIO)
         case event: SnapshotAppendedCPEvent     => processSnapshotAppended(event, toConnectionIO)
@@ -49,8 +50,6 @@ class CommandProcessor(
   private def extractQuickSettings(obj: Option[JsonObject]): IO[Option[Profile.QuickSettings]] = obj.map { jsonObject =>
     EitherT.fromEither[IO](jsonObject.asJson.as[Profile.QuickSettings]).rethrowT
   }.sequence
-
-  private def logInfo(str: String) = doobie.free.connection.delay(logger.info(str))
 
   private def processConnectionCreated(
       event: ConnectionCreatedCPEvent,
@@ -70,7 +69,7 @@ class CommandProcessor(
     resp <-
       if (deliverHistoricalData)
         for {
-          _ <- logInfo(
+          _ <- logger.info(
             show"historical data delivery enabled: enqueuing delivery of all files for dataset_id=${datasetId}"
           )
           searchPeriod = DatasetFilesAPI.RightOpenPeriod(until = event.metadata.timestamp)
@@ -85,7 +84,7 @@ class CommandProcessor(
         } yield resp
       else
         for {
-          _ <- logInfo(
+          _ <- logger.info(
             show"historical data delivery disabled: skipping enqueuing of existing files for dataset_id=${datasetId}"
           )
         } yield Result.empty
@@ -114,7 +113,7 @@ class CommandProcessor(
           settingsId = settingsId
         )
       )
-      _ <- logInfo(show"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
+      _ <- logger.info(show"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
     } yield Result(command = command, jobs = newJobs)
   }
 
@@ -156,7 +155,7 @@ class CommandProcessor(
           status = Command.Status.ProcessingFiles(files.map(file => FileName(file.name)))
         )
       )
-      _ <- logInfo(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
+      _ <- logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
     } yield Result(command = command, jobs = newJobs)
 
   private def processSnapshotAppended(
