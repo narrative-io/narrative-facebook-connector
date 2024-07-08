@@ -83,8 +83,8 @@ resolvers ++= Seq(
   "Narrative Releases plugins" at "s3://s3.amazonaws.com/narrative-artifact-releases"
 )
 
-addSbtPlugin("io.narrative" % "common-build" % "4.0.5")
+addSbtPlugin("io.narrative" % "common-build" % "4.0.7")
 addDependencyTreePlugin
 
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.0")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.12.0")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.12.1")
