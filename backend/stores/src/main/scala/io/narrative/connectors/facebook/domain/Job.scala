@@ -9,7 +9,7 @@ import io.narrative.connectors.model.SnapshotId
 final case class Job(
     eventRevision: Revision,
     file: FileName,
-    snapshotId: Option[SnapshotId]
+    snapshotId: Option[SnapshotId] // TODO: not optional after Subscription removal.
 )
 
 object Job {

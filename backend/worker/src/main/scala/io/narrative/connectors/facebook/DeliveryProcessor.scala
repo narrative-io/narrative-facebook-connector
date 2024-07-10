@@ -65,6 +65,9 @@ class DeliveryProcessor(
         .getOrRaise(new RuntimeException(s"could not find settings with id ${settingsId.show}"))
       profile <- profile_!(profileId)
       token <- encryption.decrypt(profile.token.encrypted)
+      _ <- IO.raiseWhen(job.snapshotId.isEmpty)(
+        new RuntimeException(s"Job($job) requires a snapshot id for snapshots/connection created events.")
+      )
       _ <- deliverFile(settings.audienceId, connection.datasetId, job, token)
       _ <- markDelivered(job, job.file)
     } yield ()
