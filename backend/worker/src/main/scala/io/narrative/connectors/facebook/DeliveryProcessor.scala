@@ -13,19 +13,17 @@ import io.narrative.connectors.api.events.EventsApi.DeliveryEvent.{
   ConnectionCreated
 }
 import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
-import io.narrative.connectors.facebook.DeliveryProcessor.{
-  DeliverableEntry,
-  SnapshotAppendedEntry,
-  SubscriptionDeliveryEntry
-}
+import io.narrative.connectors.facebook.DeliveryProcessor.SubscriptionDeliveryEntry
 import io.narrative.connectors.facebook.domain.Command.FileStatus
 import io.narrative.connectors.facebook.domain.{FileName, Job, Profile, Revision, Settings}
 import io.narrative.connectors.facebook.services.{FacebookClient, FacebookToken, TokenEncryptionService}
 import io.narrative.connectors.facebook.stores.CommandStore.StatusUpdate.FileUpdate
 import io.narrative.connectors.facebook.stores.{CommandStore, ProfileStore, SettingsStore}
 import io.narrative.connectors.spark.ParquetTransformer
-import io.narrative.connectors.facebook.DeliveryProcessor.ConnectionCreatedEntry
 import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
+import io.narrative.connectors.facebook.domain.ConnectionId
+import io.narrative.connectors.facebook.domain.Audience
+import io.narrative.connectors.model.DatasetId
 
 // TODO: handle connection creation events?
 class DeliveryProcessor(
@@ -48,63 +46,77 @@ class DeliveryProcessor(
         .getOrRaise(new RuntimeException(s"could not find command with revision ${job.eventRevision.show}"))
       _ <- command.payload.payload match {
         case sd: SubscriptionDelivery =>
-          processDeliverable(job, SubscriptionDeliveryEntry(sd, command.settingsId))
+          processDeliverableSubscription(job, SubscriptionDeliveryEntry(sd, command.settingsId))
         case sa: SnapshotAppended =>
-          processDeliverable(job, SnapshotAppendedEntry(sa, command.settingsId))
+          processDeliverable(ConnectionId(sa.connectionId), command.settingsId, job)
         case cc: DeliveryEvent.ConnectionCreated =>
-          processDeliverable(job, ConnectionCreatedEntry(cc, command.settingsId))
+          processDeliverable(ConnectionId(cc.connectionId), command.settingsId, job)
       }
     } yield ()
 
     deliverIO.handleErrorWith(markFailure(job, job.file, _))
   }
 
-  private def processDeliverable(job: Job, deliverable: DeliverableEntry): IO[Unit] =
+  private def processDeliverable(connectionId: ConnectionId, settingsId: Settings.Id, job: Job): IO[Unit] =
     for {
-      settings <- OptionT(settingsStore.settings(deliverable.settingsId))
-        .getOrRaise(new RuntimeException(s"could not find settings with id ${deliverable.settingsId.show}"))
-      profileId <- (deliverable match {
-        case SubscriptionDeliveryEntry(e, _) => IO(e.profileId)
-        case SnapshotAppendedEntry(e, _)     => connectionsApi.connection(e.connectionId).map(_.profileId)
-        case ConnectionCreatedEntry(c, _)    => connectionsApi.connection(c.connectionId).map(_.profileId)
-      }).map(Profile.Id.apply)
+      connection <- connectionsApi.connection(connectionId.value)
+      profileId = Profile.Id(connection.profileId)
+      settings <- OptionT(settingsStore.settings(settingsId))
+        .getOrRaise(new RuntimeException(s"could not find settings with id ${settingsId.show}"))
       profile <- profile_!(profileId)
       token <- encryption.decrypt(profile.token.encrypted)
-      _ <- deliverFile(job.eventRevision, job, deliverable, settings, token)
+      _ <- deliverFile(settings.audienceId, connection.datasetId, job, token)
       _ <- markDelivered(job, job.file)
     } yield ()
 
   private def deliverFile(
+      audienceId: Audience.Id,
+      datasetId: DatasetId,
+      job: Job,
+      token: FacebookToken
+  ): IO[Unit] = {
+    fileApi
+      .downloadFile(datasetId.value, job.snapshotId.get.longValue, job.file.value)
+      .flatMap(parquetTransformer.toJson)
+      .use { path =>
+        fs2.io.file
+          .Files[IO]
+          .readAll(fs2.io.file.Path.fromNioPath(path), 65536, Flags.Read)
+          .through(fs2.text.utf8.decode)
+          .through(fs2.text.lines)
+          .map(parse(_).toOption.map(AudienceParser.parseDataset _))
+          .unNone
+          .chunkN(FacebookClient.AddToAudienceMaxBatchSize, true)
+          .evalMapChunk(chunk => fb.addToAudience(token, audienceId, chunk.toList))
+          .compile
+          .drain
+      }
+  }
+
+  private def processDeliverableSubscription(job: Job, deliverable: SubscriptionDeliveryEntry): IO[Unit] =
+    for {
+      settings <- OptionT(settingsStore.settings(deliverable.settingsId))
+        .getOrRaise(new RuntimeException(s"could not find settings with id ${deliverable.settingsId.show}"))
+      profileId = Profile.Id(deliverable.subscriptionDelivery.profileId)
+      profile <- profile_!(profileId)
+      token <- encryption.decrypt(profile.token.encrypted)
+      _ <- deliverFileSubscription(job.eventRevision, job, settings, token)
+      _ <- markDelivered(job, job.file)
+    } yield ()
+
+  private def deliverFileSubscription(
       eventRevision: Revision,
       job: Job,
-      event: DeliverableEntry,
       settings: Settings,
       token: FacebookToken
   ): IO[Unit] = {
-    val (fileResource, parseAudience) = event match {
-      case _: SubscriptionDeliveryEntry =>
-        (
-          fileApi.downloadFile(eventRevision.value, job.file.value),
-          AudienceParser.parseLegacy _
-        )
-      case _: SnapshotAppendedEntry =>
-        (
-          fileApi.downloadFile(eventRevision.value, job.file.value).flatMap(parquetTransformer.toJson),
-          AudienceParser.parseDataset _
-        )
-      case _: ConnectionCreatedEntry =>
-        (
-          fileApi.downloadFile(eventRevision.value, job.file.value).flatMap(parquetTransformer.toJson),
-          AudienceParser.parseDataset _
-        )
-    }
-    fileResource.use { path =>
+    fileApi.downloadFile(eventRevision.value, job.file.value).use { path =>
       fs2.io.file
         .Files[IO]
         .readAll(fs2.io.file.Path.fromNioPath(path), 65536, Flags.Read)
         .through(fs2.text.utf8.decode)
         .through(fs2.text.lines)
-        .map(parse(_).toOption.map(parseAudience))
+        .map(parse(_).toOption.map(AudienceParser.parseLegacy _))
         .unNone
         .chunkN(FacebookClient.AddToAudienceMaxBatchSize, allowFewer = true)
         .evalMapChunk(chunk => fb.addToAudience(token, settings.audienceId, chunk.toList))
