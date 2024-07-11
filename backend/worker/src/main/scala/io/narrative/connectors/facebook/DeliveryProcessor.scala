@@ -25,7 +25,6 @@ import io.narrative.connectors.facebook.domain.ConnectionId
 import io.narrative.connectors.facebook.domain.Audience
 import io.narrative.connectors.model.DatasetId
 
-// TODO: handle connection creation events?
 class DeliveryProcessor(
     fileApi: BackwardsCompatibleFilesApi.Ops[IO],
     connectionsApi: ConnectionsApi.Ops[IO],
