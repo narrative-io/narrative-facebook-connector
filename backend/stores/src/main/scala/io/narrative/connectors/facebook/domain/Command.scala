@@ -11,14 +11,17 @@ import io.narrative.connectors.api.events.EventsApi.DeliveryEvent
 
 import java.time.Instant
 
-case class Command(
+sealed trait CommandType
+
+case object NoCommand extends CommandType
+final case class Command(
     createdAt: Instant,
     eventRevision: Revision,
     payload: DeliveryEvent,
     settingsId: Settings.Id,
     status: Command.Status,
     updatedAt: Instant
-)
+) extends CommandType
 object Command {
   import io.narrative.connectors.facebook.codecs.CirceConfig._
   import io.narrative.connectors.facebook.meta.JsonMeta._

@@ -4,7 +4,6 @@ import cats.data.EitherT
 import cats.effect.IO
 import cats.implicits._
 import cats.~>
-import com.typesafe.scalalogging.LazyLogging
 import doobie.ConnectionIO
 import io.circe.JsonObject
 import io.circe.syntax.EncoderOps
@@ -14,6 +13,10 @@ import io.narrative.connectors.api.files.BackwardsCompatibleFilesApi
 import io.narrative.connectors.facebook.domain._
 import io.narrative.connectors.facebook.stores.CommandStore
 import io.narrative.connectors.queue.QueueStore
+import io.narrative.connectors.api.datasets.DatasetFilesAPI
+import io.narrative.connectors.model.SnapshotId
+import io.narrative.connectors.facebook.domain.Profile.QuickSettings
+import org.typelevel.log4cats.{LoggerFactory, SelfAwareStructuredLogger}
 
 /** Resolves commands saved by the [[CommandConsumer]]. Outputs a resolved, stored command and jobs for processing each
   * file in the delivery command.
@@ -23,9 +26,11 @@ class CommandProcessor(
     jobStore: QueueStore.Ops[Job, ConnectionIO],
     settingsService: SettingsService.Ops[IO],
     connectionsApi: ConnectionsApi.Ops[IO],
-    filesApi: BackwardsCompatibleFilesApi.Ops[IO]
-) extends CommandProcessor.Ops[ConnectionIO]
-    with LazyLogging {
+    filesApi: BackwardsCompatibleFilesApi.Ops[IO],
+    datasetFilesApi: DatasetFilesAPI.Ops[IO]
+)(implicit loggerFactory: LoggerFactory[ConnectionIO])
+    extends CommandProcessor.Ops[ConnectionIO] {
+  private val logger: SelfAwareStructuredLogger[ConnectionIO] = loggerFactory.getLogger
 
   import CommandProcessor._
 
@@ -34,8 +39,9 @@ class CommandProcessor(
       toConnectionIO: IO ~> ConnectionIO
   ): ConnectionIO[CommandProcessor.Result] =
     for {
-      _ <- doobie.free.connection.delay(logger.info(s"processing ${event}"))
+      _ <- logger.info(s"processing ${event}")
       result <- event match {
+        case event: ConnectionCreatedCPEvent    => processConnectionCreated(event, toConnectionIO)
         case event: SnapshotAppendedCPEvent     => processSnapshotAppended(event, toConnectionIO)
         case event: SubscriptionDeliveryCPEvent => processSubscriptionDelivery(event, toConnectionIO)
       }
@@ -44,6 +50,72 @@ class CommandProcessor(
   private def extractQuickSettings(obj: Option[JsonObject]): IO[Option[Profile.QuickSettings]] = obj.map { jsonObject =>
     EitherT.fromEither[IO](jsonObject.asJson.as[Profile.QuickSettings]).rethrowT
   }.sequence
+
+  private def processConnectionCreated(
+      event: ConnectionCreatedCPEvent,
+      toConnectionIO: IO ~> ConnectionIO
+  ): ConnectionIO[CommandProcessor.Result] = for {
+    connection <- toConnectionIO(connectionsApi.connection(event.connectionCreated.connectionId))
+    quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
+    settings <- toConnectionIO(
+      getSettings(
+        Profile.Id.apply(connection.profileId),
+        ConnectionId.apply(event.connectionCreated.connectionId),
+        quickSettings
+      )
+    )
+    deliverHistoricalData = quickSettings.flatMap(_.historicalDataEnabled).getOrElse(false)
+    datasetId = connection.datasetId
+    resp <-
+      if (deliverHistoricalData)
+        for {
+          _ <- logger.info(
+            show"historical data delivery enabled: enqueuing delivery of all files for dataset_id=${datasetId}"
+          )
+          searchPeriod = DatasetFilesAPI.RightOpenPeriod(until = event.metadata.timestamp)
+          apiFiles <- toConnectionIO(datasetFilesApi.datasetFilesForPeriod(datasetId, searchPeriod))
+          files = apiFiles.map(apiFile => FileToProcess(name = apiFile.file, snapshotId = apiFile.snapshotId))
+          resp <- enqueueCommandAndJobs(
+            data = event.connectionCreated,
+            files = files,
+            metadata = event.metadata,
+            settingsId = settings.id
+          )
+        } yield resp
+      else
+        for {
+          _ <- logger.info(
+            show"historical data delivery disabled: skipping enqueuing of existing files for dataset_id=${datasetId}"
+          )
+        } yield Result.empty
+  } yield resp
+
+  private def enqueueCommandAndJobs(
+      data: DeliveryEvent.Payload,
+      files: List[FileToProcess],
+      metadata: DeliveryEvent.Metadata,
+      settingsId: Settings.Id
+  ): ConnectionIO[Result] = {
+    val newJobs = files.map { file =>
+      Job(
+        eventRevision = Revision.apply(metadata.revision.value),
+        file = FileName.apply(file.name),
+        snapshotId = file.snapshotId.some
+      )
+    }
+    for {
+      _ <- jobStore.enqueue(newJobs)
+      command <- commandStore.upsert(
+        CommandStore.NewCommand(
+          eventRevision = Revision(metadata.revision.value),
+          payload = DeliveryEvent(metadata, data),
+          status = Command.Status.ProcessingFiles(files.map(file => FileName(file.name))),
+          settingsId = settingsId
+        )
+      )
+      _ <- logger.info(show"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
+    } yield Result(command = command, jobs = newJobs)
+  }
 
   private def processSubscriptionDelivery(
       event: SubscriptionDeliveryCPEvent,
@@ -70,7 +142,8 @@ class CommandProcessor(
       newJobs = files.map { resp =>
         Job(
           eventRevision = Revision.apply(event.metadata.revision.value),
-          file = FileName.apply(resp.name)
+          file = FileName.apply(resp.name),
+          snapshotId = none
         )
       }
       _ <- jobStore.enqueue(newJobs)
@@ -82,11 +155,8 @@ class CommandProcessor(
           status = Command.Status.ProcessingFiles(files.map(file => FileName(file.name)))
         )
       )
-      result = Result(command = command, jobs = newJobs)
-      _ <- doobie.free.connection.delay(
-        logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
-      )
-    } yield result
+      _ <- logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
+    } yield Result(command = command, jobs = newJobs)
 
   private def processSnapshotAppended(
       event: SnapshotAppendedCPEvent,
@@ -95,44 +165,37 @@ class CommandProcessor(
     for {
       connection <- toConnectionIO(connectionsApi.connection(event.snapshotAppended.connectionId))
       quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
-
       settings <- toConnectionIO(
-        settingsService
-          .getOrCreate(
-            quickSettings,
-            Settings.Id
-              .fromConnection(
-                Profile.Id.apply(connection.profileId),
-                ConnectionId.apply(event.snapshotAppended.connectionId)
-              ),
-            Audience.Name(s"Connection ${ConnectionId.apply(event.snapshotAppended.connectionId).show} Audience"),
-            Profile.Id.apply(connection.profileId)
-          )
-      )
-      files <- toConnectionIO(filesApi.getFiles(event.metadata.revision.value))
-      newJobs = files.map { resp =>
-        Job(
-          eventRevision = Revision.apply(event.metadata.revision.value),
-          file = FileName.apply(resp.name)
-        )
-      }
-      _ <- jobStore.enqueue(newJobs)
-      command <- commandStore.upsert(
-        CommandStore.NewCommand(
-          eventRevision = Revision(event.metadata.revision.value),
-          payload = DeliveryEvent(event.metadata, event.snapshotAppended),
-          settingsId = settings.id,
-          status = Command.Status.ProcessingFiles(files.map(file => FileName(file.name)))
+        getSettings(
+          Profile.Id.apply(connection.profileId),
+          ConnectionId.apply(event.snapshotAppended.connectionId),
+          quickSettings
         )
       )
-      result = Result(command = command, jobs = newJobs)
-      _ <- doobie.free.connection.pure(
-        logger.info(s"generated command. revision=${command.eventRevision.show}, payload=${command.payload.show}")
+      apiFiles <- toConnectionIO(filesApi.getFiles(event.metadata.revision.value))
+      files = apiFiles.map(apiFile =>
+        FileToProcess(name = apiFile.name, snapshotId = SnapshotId(event.snapshotAppended.snapshotId))
       )
-    } yield result
+      res <- enqueueCommandAndJobs(event.snapshotAppended, files, event.metadata, settings.id)
+    } yield res
+
+  private def getSettings(profileId: Profile.Id, connectionId: ConnectionId, quickSettings: Option[QuickSettings]) =
+    settingsService
+      .getOrCreate(
+        quickSettings,
+        Settings.Id
+          .fromConnection(
+            profileId,
+            connectionId
+          ),
+        Audience.Name(s"Connection ${connectionId.show} Audience"),
+        profileId
+      )
 }
 
 object CommandProcessor {
+
+  private final case class FileToProcess(name: String, snapshotId: SnapshotId)
 
   sealed trait CommandProcessorEvent {
     def metadata: DeliveryEvent.Metadata
@@ -148,6 +211,11 @@ object CommandProcessor {
       subscriptionDelivery: DeliveryEvent.SubscriptionDelivery
   ) extends CommandProcessorEvent
 
+  case class ConnectionCreatedCPEvent(
+      metadata: DeliveryEvent.Metadata,
+      connectionCreated: DeliveryEvent.ConnectionCreated
+  ) extends CommandProcessorEvent
+
   trait ReadOps[F[_]] {}
   trait WriteOps[F[_]] {
     def process(event: CommandProcessorEvent, toConnectionIO: IO ~> ConnectionIO): F[Result]
@@ -156,6 +224,10 @@ object CommandProcessor {
   trait Ops[F[_]] extends ReadOps[F] with WriteOps[F]
 
   /** The input job to process, including a projection of the payload to the required type of "ProcessCommand". */
-  final case class Result(command: Command, jobs: List[Job])
+  final case class Result(command: CommandType, jobs: List[Job])
+
+  object Result {
+    val empty = Result(NoCommand, List.empty)
+  }
 
 }

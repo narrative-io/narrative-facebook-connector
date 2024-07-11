@@ -28,6 +28,7 @@ import org.http4s.ember.client.EmberClientBuilder
 import cats.effect.Temporal
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient
 import org.typelevel.log4cats.LoggerFactory
+import io.narrative.connectors.api.datasets.DatasetFilesAPI
 
 final case class Resources(
     eventConsumer: EventConsumer.Ops[IO],
@@ -42,7 +43,8 @@ object Resources extends LazyLogging {
 
   def apply(config: Config, parallelizationFactor: Int)(implicit
       timer: Temporal[IO],
-      logging: LoggerFactory[IO]
+      logging: LoggerFactory[IO],
+      loggingConnectionIO: LoggerFactory[ConnectionIO]
   ): Resource[IO, Resources] =
     for {
       awsCredentials <- Resource.eval(IO.blocking(new DefaultAWSCredentialsProviderChain()))
@@ -60,6 +62,8 @@ object Resources extends LazyLogging {
       parquetTransformer = new ParquetTransformer(sparkSession)
 
       commandStore = new CommandStore()
+
+      datasetFiles = new DatasetFilesAPI(api)
       profileStore = ProfileStore(xa)
       settingsStore = SettingsStore(xa)
       settingsService = new SettingsService(encryption, fb, profileStore, settingsStore)
@@ -72,7 +76,14 @@ object Resources extends LazyLogging {
       eventsApi = new EventsApi(api)
       filesApi = new BackwardsCompatibleFilesApi(eventsApi, filesApiV1, filesApiV2)
 
-      commandProcessor = new CommandProcessor(commandStore, jobStore, settingsService, connectionsApi, filesApi)
+      commandProcessor = new CommandProcessor(
+        commandStore,
+        jobStore,
+        settingsService,
+        connectionsApi,
+        filesApi,
+        datasetFiles
+      )
       deliveryProcessor = new DeliveryProcessor(
         filesApi,
         connectionsApi,

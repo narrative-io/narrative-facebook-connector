@@ -9,10 +9,12 @@ import io.narrative.connectors.facebook.CommandProcessor.{SnapshotAppendedCPEven
 import io.narrative.connectors.queue.QueueConsumer
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
+import io.narrative.connectors.facebook.CommandProcessor.ConnectionCreatedCPEvent
 
 object Main extends IOApp.Simple with LazyLogging {
-  private implicit val loggingConnectionIO: LoggerFactory[ConnectionIO] = Slf4jFactory.create[ConnectionIO]
   private implicit val logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
+  private implicit val loggerFactoryConnectionIO: LoggerFactory[ConnectionIO] = Slf4jFactory.create[ConnectionIO]
+
   val parallelizationFactor = 1
   override def run: IO[Unit] = {
     val worker = for {
@@ -45,8 +47,10 @@ object Main extends IOApp.Simple with LazyLogging {
               resources.eventProcessor
                 .process(SnapshotAppendedCPEvent(event.metadata, sa), toConnectionIO)
                 .map(_ => ())
-            case DeliveryEvent.ConnectionCreated(connectionId) =>
-              loggingConnectionIO.getLogger.info(s"Connection-created event [$connectionId] ignored")
+            case cc: DeliveryEvent.ConnectionCreated =>
+              resources.eventProcessor
+                .process(ConnectionCreatedCPEvent(event.metadata, cc), toConnectionIO)
+                .map(_ => ())
           },
         computeAndExportMetrics
       ),
