@@ -10,8 +10,8 @@
     "deploy:prod": "wrangler publish -e production"
   },
   "dependencies": {
-    "@narrative.io/tackle-box": "0.4.7-beta.76",
-    "axios": "^0.21.0",
+    "@narrative.io/tackle-box": "0.7.21",
+    "axios": "^1.7.2",
     "core-js": "^3.6.5",
     "hash-wasm": "^4.1.0",
     "moment": "^2.29.1",
