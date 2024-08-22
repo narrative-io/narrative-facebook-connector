@@ -2,7 +2,7 @@ import sbt._
 
 object LibraryDependencies {
   object NarrativeBackend {
-    val version = "20.11.5"
+    val version = "21.1.0"
     val `narrative-common-ssm` = "io.narrative" %% "common-ssm" % version
     val `narrative-common-catsretry` = "io.narrative" %% "common-catsretry" % version
     val `narrative-common-doobie-testkit` = "io.narrative" %% "common-doobie-testkit" % version
@@ -15,14 +15,14 @@ object LibraryDependencies {
   }
 
   object NarrativeConnectorFramework {
-    val version = "0.2.2"
+    val version = "0.2.4"
 
     val `connector-framework-core` =
       "io.narrative" %% "connector-framework-core" % version
   }
 
   object Aws {
-    val version = "1.12.170"
+    val version = "1.12.656"
     val `aws-java-sdk-core` = "com.amazonaws" % "aws-java-sdk-core" % version
     val `aws-java-sdk-kms` = "com.amazonaws" % "aws-java-sdk-kms" % version
     val `aws-java-sdk-ssm` = "com.amazonaws" % "aws-java-sdk-ssm" % version
@@ -83,7 +83,7 @@ object LibraryDependencies {
   }
 
   object Jackson {
-    val version = "2.13.3"
+    val version = "2.15.2"
     def overrides = Seq(
       "com.fasterxml.jackson.core" % "jackson-databind" % version,
       "com.fasterxml.jackson.core" % "jackson-annotations" % version,
