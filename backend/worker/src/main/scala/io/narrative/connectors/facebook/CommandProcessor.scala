@@ -1,10 +1,10 @@
 package io.narrative.connectors.facebook
 
-import cats.data.EitherT
+import cats.data.{EitherT, OptionT}
 import cats.effect.IO
 import cats.implicits._
-import cats.~>
-import doobie.ConnectionIO
+import cats.{Monad, ~>}
+import doobie.{ConnectionIO, WeakAsync}
 import io.circe.JsonObject
 import io.circe.syntax.EncoderOps
 import io.narrative.connectors.api.connections.ConnectionsApi
@@ -31,6 +31,9 @@ class CommandProcessor(
 )(implicit loggerFactory: LoggerFactory[ConnectionIO])
     extends CommandProcessor.Ops[ConnectionIO] {
   private val logger: SelfAwareStructuredLogger[ConnectionIO] = loggerFactory.getLogger
+  // Resolves the ambiguous implicit error for Monad[ConnectionIO].
+  // Both WeakAsync[ConnectionIO] and catsFreeMonadForFree provide a Monad instance.
+  private implicit val monadConnectionIO: Monad[ConnectionIO] = WeakAsync[ConnectionIO]
 
   import CommandProcessor._
 
@@ -54,41 +57,48 @@ class CommandProcessor(
   private def processConnectionCreated(
       event: ConnectionCreatedCPEvent,
       toConnectionIO: IO ~> ConnectionIO
-  ): ConnectionIO[CommandProcessor.Result] = for {
-    connection <- toConnectionIO(connectionsApi.connection(event.connectionCreated.connectionId))
-    quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
-    settings <- toConnectionIO(
-      getSettings(
-        Profile.Id.apply(connection.profileId),
-        ConnectionId.apply(event.connectionCreated.connectionId),
-        quickSettings
-      )
-    )
-    deliverHistoricalData = quickSettings.flatMap(_.historicalDataEnabled).getOrElse(false)
-    datasetId = connection.datasetId
-    resp <-
-      if (deliverHistoricalData)
+  ): ConnectionIO[CommandProcessor.Result] =
+    OptionT(toConnectionIO(connectionsApi.connection(event.connectionCreated.connectionId)))
+      .semiflatMap(connection =>
         for {
-          _ <- logger.info(
-            show"historical data delivery enabled: enqueuing delivery of all files for dataset_id=${datasetId}"
+          quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
+          settings <- toConnectionIO(
+            getSettings(
+              Profile.Id.apply(connection.profileId),
+              ConnectionId.apply(event.connectionCreated.connectionId),
+              quickSettings
+            )
           )
-          searchPeriod = DatasetFilesAPI.RightOpenPeriod(until = event.metadata.timestamp)
-          apiFiles <- toConnectionIO(datasetFilesApi.datasetFilesForPeriod(datasetId, searchPeriod))
-          files = apiFiles.map(apiFile => FileToProcess(name = apiFile.file, snapshotId = apiFile.snapshotId))
-          resp <- enqueueCommandAndJobs(
-            data = event.connectionCreated,
-            files = files,
-            metadata = event.metadata,
-            settingsId = settings.id
-          )
+          deliverHistoricalData = quickSettings.flatMap(_.historicalDataEnabled).getOrElse(false)
+          datasetId = connection.datasetId
+          resp <-
+            if (deliverHistoricalData)
+              for {
+                _ <- logger.info(
+                  show"historical data delivery enabled: enqueuing delivery of all files for dataset_id=${datasetId}"
+                )
+                searchPeriod = DatasetFilesAPI.RightOpenPeriod(until = event.metadata.timestamp)
+                apiFiles <- toConnectionIO(datasetFilesApi.datasetFilesForPeriod(datasetId, searchPeriod))
+                files = apiFiles.map(apiFile => FileToProcess(name = apiFile.file, snapshotId = apiFile.snapshotId))
+                resp <- enqueueCommandAndJobs(
+                  data = event.connectionCreated,
+                  files = files,
+                  metadata = event.metadata,
+                  settingsId = settings.id
+                )
+              } yield resp
+            else
+              for {
+                _ <- logger.info(
+                  show"historical data delivery disabled: skipping enqueuing of existing files for dataset_id=${datasetId}"
+                )
+              } yield Result.empty
         } yield resp
-      else
-        for {
-          _ <- logger.info(
-            show"historical data delivery disabled: skipping enqueuing of existing files for dataset_id=${datasetId}"
-          )
-        } yield Result.empty
-  } yield resp
+      )
+      .getOrElseF(
+        logger.info(show"could not find connection ${event.connectionCreated.connectionId}. skipping processing") *>
+          Result.empty.pure[ConnectionIO]
+      )
 
   private def enqueueCommandAndJobs(
       data: DeliveryEvent.Payload,
@@ -162,22 +172,28 @@ class CommandProcessor(
       event: SnapshotAppendedCPEvent,
       toConnectionIO: IO ~> ConnectionIO
   ): ConnectionIO[CommandProcessor.Result] =
-    for {
-      connection <- toConnectionIO(connectionsApi.connection(event.snapshotAppended.connectionId))
-      quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
-      settings <- toConnectionIO(
-        getSettings(
-          Profile.Id.apply(connection.profileId),
-          ConnectionId.apply(event.snapshotAppended.connectionId),
-          quickSettings
-        )
+    OptionT(toConnectionIO(connectionsApi.connection(event.snapshotAppended.connectionId)))
+      .semiflatMap(connection =>
+        for {
+          quickSettings <- toConnectionIO(extractQuickSettings(connection.quickSettings))
+          settings <- toConnectionIO(
+            getSettings(
+              Profile.Id.apply(connection.profileId),
+              ConnectionId.apply(event.snapshotAppended.connectionId),
+              quickSettings
+            )
+          )
+          apiFiles <- toConnectionIO(filesApi.getFiles(event.metadata.revision.value))
+          files = apiFiles.map(apiFile =>
+            FileToProcess(name = apiFile.name, snapshotId = SnapshotId(event.snapshotAppended.snapshotId))
+          )
+          res <- enqueueCommandAndJobs(event.snapshotAppended, files, event.metadata, settings.id)
+        } yield res
       )
-      apiFiles <- toConnectionIO(filesApi.getFiles(event.metadata.revision.value))
-      files = apiFiles.map(apiFile =>
-        FileToProcess(name = apiFile.name, snapshotId = SnapshotId(event.snapshotAppended.snapshotId))
+      .getOrElseF(
+        logger.info(show"could not find connection ${event.snapshotAppended.connectionId}. skipping processing") *>
+          Result.empty.pure[ConnectionIO]
       )
-      res <- enqueueCommandAndJobs(event.snapshotAppended, files, event.metadata, settings.id)
-    } yield res
 
   private def getSettings(profileId: Profile.Id, connectionId: ConnectionId, quickSettings: Option[QuickSettings]) =
     settingsService

@@ -57,19 +57,26 @@ class DeliveryProcessor(
   }
 
   private def processDeliverable(connectionId: ConnectionId, settingsId: Settings.Id, job: Job): IO[Unit] =
-    for {
-      connection <- connectionsApi.connection(connectionId.value)
-      profileId = Profile.Id(connection.profileId)
-      settings <- OptionT(settingsStore.settings(settingsId))
-        .getOrRaise(new RuntimeException(s"could not find settings with id ${settingsId.show}"))
-      profile <- profile_!(profileId)
-      token <- encryption.decrypt(profile.token.encrypted)
-      _ <- IO.raiseWhen(job.snapshotId.isEmpty)(
-        new RuntimeException(s"Job($job) requires a snapshot id for snapshots/connection created events.")
+    OptionT(connectionsApi.connection(connectionId.value))
+      .semiflatMap { connection =>
+        val profileId = Profile.Id(connection.profileId)
+        for {
+          settings <- OptionT(settingsStore.settings(settingsId))
+            .getOrRaise(new RuntimeException(s"could not find settings with id ${settingsId.show}"))
+          profile <- profile_!(profileId)
+          token <- encryption.decrypt(profile.token.encrypted)
+          _ <- IO.raiseWhen(job.snapshotId.isEmpty)(
+            new RuntimeException(s"Job($job) requires a snapshot id for snapshots/connection created events.")
+          )
+          _ <- deliverFile(settings.audienceId, connection.datasetId, job, token)
+          _ <- markDelivered(job, job.file)
+        } yield ()
+      }
+      .getOrRaise(
+        new RuntimeException(
+          show"could not find connection with id $connectionId while processing job ${job.file}. failing job."
+        )
       )
-      _ <- deliverFile(settings.audienceId, connection.datasetId, job, token)
-      _ <- markDelivered(job, job.file)
-    } yield ()
 
   private def deliverFile(
       audienceId: Audience.Id,
